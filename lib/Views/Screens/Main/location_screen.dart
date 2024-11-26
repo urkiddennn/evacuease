@@ -16,6 +16,7 @@ class _LocationScreenState extends State<LocationScreen> {
   LatLng? _currentLocation;
   List<LatLng> _routePoints = [];
   final TextEditingController _searchController = TextEditingController();
+  final MapController _mapController = MapController();
 
   bool _isLoading = false; // For loading indicator
   bool _isMapLoaded = false; // To track if the map is loaded
@@ -56,6 +57,11 @@ class _LocationScreenState extends State<LocationScreen> {
         _currentLocation = LatLng(position.latitude, position.longitude);
         _isLoading = false;
       });
+
+      // Move map to the current location
+      if (_currentLocation != null) {
+        _mapController.move(_currentLocation!, 14.0); // Zoom level 14
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,7 +70,7 @@ class _LocationScreenState extends State<LocationScreen> {
     }
   }
 
-  /// Fetch route between current location and fixed location
+  /// Fetch route from current location to the fixed location
   Future<void> _fetchRoute() async {
     if (_currentLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,79 +112,19 @@ class _LocationScreenState extends State<LocationScreen> {
     }
   }
 
-  Future<void> _searchLocation(String query) async {
-    setState(() => _isLoading = true);
-
-    try {
-      final response = await http.get(
-        Uri.parse(
-            "https://nominatim.openstreetmap.org/search?q=$query&format=json"),
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> results = jsonDecode(response.body);
-
-        if (results.isNotEmpty) {
-          final lat = double.parse(results[0]['lat']);
-          final lon = double.parse(results[0]['lon']);
-          setState(() {
-            _currentLocation = LatLng(lat, lon);
-            _isLoading = false;
-          });
-        } else {
-          throw Exception("Location not found.");
-        }
-      } else {
-        throw Exception("Failed to search location.");
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("OSM Map with Navigation"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text("Search Location"),
-                  content: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: "Enter location name",
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _searchLocation(_searchController.text);
-                      },
-                      child: const Text("Search"),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: Stack(
         children: [
           FlutterMap(
+            mapController: _mapController,
             options: MapOptions(
-              initialCenter: _currentLocation ?? LatLng(10.3157, 123.8854),
-              initialZoom: 14.0,
+              initialCenter: LatLng(0, 0), // Placeholder center
+              initialZoom: 2.0, // Default zoom
               onMapReady: () => setState(() => _isMapLoaded = true),
             ),
             children: [
@@ -186,19 +132,6 @@ class _LocationScreenState extends State<LocationScreen> {
                 urlTemplate:
                     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                 subdomains: ['a', 'b', 'c'],
-                errorTileCallback: (tile, exception, stackTrace) {
-                  debugPrint("Tile failed to load: $exception");
-                  if (stackTrace != null) {
-                    debugPrint(stackTrace.toString());
-                  }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Failed to load a map tile."),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                },
               ),
               if (_currentLocation != null)
                 MarkerLayer(
@@ -244,7 +177,7 @@ class _LocationScreenState extends State<LocationScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchRoute,
         child: const Icon(Icons.directions),
-        tooltip: "Navigate to Evacuation Site",
+        tooltip: "Navigate to Fixed Location",
       ),
     );
   }
