@@ -13,9 +13,14 @@ class LocationScreen extends StatefulWidget {
 }
 
 class _LocationScreenState extends State<LocationScreen> {
-  LatLng? _selectedLocation;
   LatLng? _currentLocation;
   List<LatLng> _routePoints = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  bool _isLoading = false; // For loading indicator
+  bool _isMapLoaded = false; // To track if the map is loaded
+
+  final LatLng _fixedLocation = LatLng(10.3157, 123.8854); // Demo location
 
   @override
   void initState() {
@@ -25,70 +30,111 @@ class _LocationScreenState extends State<LocationScreen> {
 
   /// Get the user's current location
   Future<void> _getCurrentLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Location services are disabled.")),
-      );
-      return;
-    }
+    setState(() => _isLoading = true);
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Location permissions are denied.")),
-        );
-        return;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception("Location services are disabled.");
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception("Location permissions are denied.");
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+            "Location permissions are permanently denied. Please enable them in settings.");
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _currentLocation = LatLng(position.latitude, position.longitude);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  /// Fetch route between current location and fixed location
+  Future<void> _fetchRoute() async {
+    if (_currentLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text(
-                "Location permissions are permanently denied. Please enable them in settings.")),
+          content: Text("Current location not available."),
+        ),
       );
       return;
     }
 
-    final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _currentLocation = LatLng(position.latitude, position.longitude);
-    });
-  }
-
-  /// Handle map tap to select a location
-  void _onTap(LatLng point) {
-    setState(() {
-      _selectedLocation = point;
-    });
-  }
-
-  /// Fetch route from current location to selected location
-  Future<void> _fetchRoute() async {
-    if (_currentLocation == null || _selectedLocation == null) return;
+    setState(() => _isLoading = true);
 
     const apiKey =
         "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed"; // Replace with your API key
-    final response = await http.get(
-      Uri.parse(
-          "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=${_currentLocation!.longitude},${_currentLocation!.latitude}&end=${_selectedLocation!.longitude},${_selectedLocation!.latitude}"),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse(
+            "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=${_currentLocation!.longitude},${_currentLocation!.latitude}&end=${_fixedLocation.longitude},${_fixedLocation.latitude}"),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final geometry = data['features'][0]['geometry']['coordinates'];
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final geometry = data['features'][0]['geometry']['coordinates'];
 
-      setState(() {
-        _routePoints = geometry
-            .map<LatLng>((point) => LatLng(point[1], point[0]))
-            .toList();
-      });
-    } else {
+        setState(() {
+          _routePoints = geometry
+              .map<LatLng>((point) => LatLng(point[1], point[0]))
+              .toList();
+          _isLoading = false;
+        });
+      } else {
+        throw Exception("Failed to fetch route.");
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to fetch route.")),
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _searchLocation(String query) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+            "https://nominatim.openstreetmap.org/search?q=$query&format=json"),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> results = jsonDecode(response.body);
+
+        if (results.isNotEmpty) {
+          final lat = double.parse(results[0]['lat']);
+          final lon = double.parse(results[0]['lon']);
+          setState(() {
+            _currentLocation = LatLng(lat, lon);
+            _isLoading = false;
+          });
+        } else {
+          throw Exception("Location not found.");
+        }
+      } else {
+        throw Exception("Failed to search location.");
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
       );
     }
   }
@@ -96,24 +142,62 @@ class _LocationScreenState extends State<LocationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Map with Routes")),
+      appBar: AppBar(
+        title: const Text("OSM Map with Navigation"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Search Location"),
+                  content: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: "Enter location name",
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _searchLocation(_searchController.text);
+                      },
+                      child: const Text("Search"),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           FlutterMap(
             options: MapOptions(
-              // Use the 'center' property instead of 'initialCenter' to properly set the map's center
-              initialCenter: _currentLocation ?? LatLng(0, 0),
-              initialZoom: 10.0,
-              onTap: (tapPosition, point) => _onTap(point),
+              initialCenter: _currentLocation ?? LatLng(10.3157, 123.8854),
+              initialZoom: 14.0,
+              onMapReady: () => setState(() => _isMapLoaded = true),
             ),
             children: [
               TileLayer(
                 urlTemplate:
-                    "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-                additionalOptions: {
-                  'accessToken':
-                      'pk.eyJ1IjoidXJraWRkZW4iLCJhIjoiY20zdG9sdWdoMGJlODJscTJuZ2sxcWM0ayJ9.F3FIfrwfoq-Xl5aWMiXM9w',
-                  'id': 'mapbox/streets-v11',
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                subdomains: ['a', 'b', 'c'],
+                errorTileCallback: (tile, exception, stackTrace) {
+                  debugPrint("Tile failed to load: $exception");
+                  if (stackTrace != null) {
+                    debugPrint(stackTrace.toString());
+                  }
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Failed to load a map tile."),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
                 },
               ),
               if (_currentLocation != null)
@@ -128,18 +212,17 @@ class _LocationScreenState extends State<LocationScreen> {
                     ),
                   ],
                 ),
-              if (_selectedLocation != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _selectedLocation!,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Icons.location_on,
-                          color: Colors.red, size: 40),
-                    ),
-                  ],
-                ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _fixedLocation,
+                    width: 40,
+                    height: 40,
+                    child: const Icon(Icons.location_on,
+                        color: Colors.red, size: 40),
+                  ),
+                ],
+              ),
               if (_routePoints.isNotEmpty)
                 PolylineLayer(
                   polylines: [
@@ -152,21 +235,16 @@ class _LocationScreenState extends State<LocationScreen> {
                 ),
             ],
           ),
-          if (_selectedLocation != null)
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: _fetchRoute,
-                    child: const Text("Get Route"),
-                  ),
-                ],
-              ),
+          if (_isLoading || !_isMapLoaded)
+            const Center(
+              child: CircularProgressIndicator(),
             ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _fetchRoute,
+        child: const Icon(Icons.directions),
+        tooltip: "Navigate to Evacuation Site",
       ),
     );
   }
