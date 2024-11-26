@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -14,19 +16,39 @@ class LocationScreen extends StatefulWidget {
 
 class _LocationScreenState extends State<LocationScreen> {
   LatLng? _currentLocation;
+  double _facingDirection = 0.0; // Facing direction in degrees
   List<LatLng> _routePoints = [];
-  final TextEditingController _searchController = TextEditingController();
   final MapController _mapController = MapController();
 
-  bool _isLoading = false; // For loading indicator
-  bool _isMapLoaded = false; // To track if the map is loaded
+  bool _isLoading = false;
+  bool _isMapLoaded = false;
 
-  final LatLng _fixedLocation = LatLng(10.3157, 123.8854); // Demo location
+  final LatLng _fixedLocation = LatLng(10.3157, 123.8854);
+
+  StreamSubscription? _compassSubscription; // Compass subscription
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
+    _startCompass();
+  }
+
+  @override
+  void dispose() {
+    _compassSubscription?.cancel(); // Cancel the subscription
+    super.dispose();
+  }
+
+  /// Start listening to compass data
+  void _startCompass() {
+    _compassSubscription = FlutterCompass.events?.listen((event) {
+      if (event.heading != null) {
+        setState(() {
+          _facingDirection = event.heading!;
+        });
+      }
+    });
   }
 
   /// Get the user's current location
@@ -138,10 +160,14 @@ class _LocationScreenState extends State<LocationScreen> {
                   markers: [
                     Marker(
                       point: _currentLocation!,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Icons.my_location,
-                          color: Colors.blue, size: 40),
+                      width: 50,
+                      height: 50,
+                      child: Transform.rotate(
+                        angle: _facingDirection *
+                            (3.14159265359 / 180), // Convert to radians
+                        child: const Icon(Icons.navigation,
+                            color: Colors.blue, size: 50),
+                      ),
                     ),
                   ],
                 ),
