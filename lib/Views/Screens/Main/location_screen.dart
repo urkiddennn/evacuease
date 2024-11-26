@@ -23,7 +23,7 @@ class _LocationScreenState extends State<LocationScreen> {
   bool _isLoading = false;
   bool _isMapLoaded = false;
 
-  final LatLng _fixedLocation = LatLng(10.3157, 123.8854);
+  final LatLng _fixedLocation = LatLng(9.019578, 126.233586);
 
   StreamSubscription? _compassSubscription; // Compass subscription
 
