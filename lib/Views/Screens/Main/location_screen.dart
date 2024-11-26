@@ -23,8 +23,35 @@ class _LocationScreenState extends State<LocationScreen> {
   bool _isLoading = false;
   bool _isMapLoaded = false;
 
-  final LatLng _fixedLocation = LatLng(9.019578, 126.233586);
+  List<Map<String, String>> _locations = [
+    {
+      "location_name": "Tago Municipal Gymnasium",
+      "details": "Hello this is the Tago Gymnasium",
+      "location": "9.019543, 126.233583"
+    },
+    {
+      "location_name": "Purisima National Highschool",
+      "details": "Hello this is the Purisima National Highschool",
+      "location": "9.015890, 126.235276"
+    },
+    {
+      "location_name": "Falcon National Highschool",
+      "details": "Hello this is the Falcon National Highschool",
+      "location": "9.018953, 126.232690"
+    },
+    {
+      "location_name": "Falcon Memorial Elementary School",
+      "details": "Hello this is the Falcon Memorial Elementary School",
+      "location": "9.021448, 126.232637"
+    },
+    {
+      "location_name": "NEMSU TANDAG",
+      "details": "NEMSU TANDAG",
+      "location": "9.03863, 126.21497"
+    }
+  ];
 
+  Map<String, String>? _nearestLocation;
   StreamSubscription? _compassSubscription; // Compass subscription
 
   @override
@@ -83,6 +110,7 @@ class _LocationScreenState extends State<LocationScreen> {
       // Move map to the current location
       if (_currentLocation != null) {
         _mapController.move(_currentLocation!, 14.0); // Zoom level 14
+        _findNearestLocation();
       }
     } catch (e) {
       setState(() => _isLoading = false);
@@ -92,13 +120,43 @@ class _LocationScreenState extends State<LocationScreen> {
     }
   }
 
-  /// Fetch route from current location to the fixed location
+  /// Find the nearest location from the list
+  void _findNearestLocation() {
+    if (_currentLocation == null) return;
+
+    double calculateDistance(LatLng a, LatLng b) {
+      final Distance distance = Distance();
+      return distance.as(LengthUnit.Meter, a, b);
+    }
+
+    double? shortestDistance;
+    Map<String, String>? nearest;
+
+    for (var location in _locations) {
+      final coords = location['location']!.split(',');
+      final lat = double.parse(coords[0]);
+      final lon = double.parse(coords[1]);
+      final distance = calculateDistance(
+        _currentLocation!,
+        LatLng(lat, lon),
+      );
+
+      if (shortestDistance == null || distance < shortestDistance) {
+        shortestDistance = distance;
+        nearest = location;
+      }
+    }
+
+    setState(() {
+      _nearestLocation = nearest;
+    });
+  }
+
+  /// Fetch route to the nearest location
   Future<void> _fetchRoute() async {
-    if (_currentLocation == null) {
+    if (_currentLocation == null || _nearestLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Current location not available."),
-        ),
+        const SnackBar(content: Text("Unable to find route.")),
       );
       return;
     }
@@ -107,10 +165,14 @@ class _LocationScreenState extends State<LocationScreen> {
 
     const apiKey =
         "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed"; // Replace with your API key
+    final coords = _nearestLocation!['location']!.split(',');
+    final endLat = coords[0];
+    final endLon = coords[1];
+
     try {
       final response = await http.get(
         Uri.parse(
-            "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=${_currentLocation!.longitude},${_currentLocation!.latitude}&end=${_fixedLocation.longitude},${_fixedLocation.latitude}"),
+            "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=${_currentLocation!.longitude},${_currentLocation!.latitude}&end=$endLon,$endLat"),
       );
 
       if (response.statusCode == 200) {
@@ -138,7 +200,7 @@ class _LocationScreenState extends State<LocationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("OSM Map with Navigation"),
+        title: const Text("Navigate"),
       ),
       body: Stack(
         children: [
@@ -171,17 +233,23 @@ class _LocationScreenState extends State<LocationScreen> {
                     ),
                   ],
                 ),
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: _fixedLocation,
-                    width: 40,
-                    height: 40,
-                    child: const Icon(Icons.location_on,
-                        color: Colors.red, size: 40),
-                  ),
-                ],
-              ),
+              if (_nearestLocation != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: LatLng(
+                        double.parse(
+                            _nearestLocation!['location']!.split(',')[0]),
+                        double.parse(
+                            _nearestLocation!['location']!.split(',')[1]),
+                      ),
+                      width: 40,
+                      height: 40,
+                      child: const Icon(Icons.location_on,
+                          color: Colors.red, size: 40),
+                    ),
+                  ],
+                ),
               if (_routePoints.isNotEmpty)
                 PolylineLayer(
                   polylines: [
@@ -203,8 +271,18 @@ class _LocationScreenState extends State<LocationScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchRoute,
         child: const Icon(Icons.directions),
-        tooltip: "Navigate to Fixed Location",
+        tooltip: "Navigate to Nearest Location",
       ),
+      bottomSheet: _nearestLocation != null
+          ? Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "${_nearestLocation!['location_name']}: ${_nearestLocation!['details']}",
+                style: const TextStyle(fontSize: 16),
+              ),
+            )
+          : null,
     );
   }
 }
