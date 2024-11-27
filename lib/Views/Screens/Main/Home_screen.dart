@@ -242,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Center(child: Text("Risk Analysis")),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
 
               // Category Buttons
               Row(
