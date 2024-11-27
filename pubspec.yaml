@@ -16,6 +16,7 @@ dependencies:
   http: ^1.2.2
   permission_handler: ^10.2.0
   flutter_compass: ^0.8.1
+  weather: ^3.1.1
 
 dev_dependencies:
   flutter_test:
