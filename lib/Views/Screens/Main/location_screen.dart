@@ -109,7 +109,7 @@ class _LocationScreenState extends State<LocationScreen> {
 
       // Move map to the current location
       if (_currentLocation != null) {
-        _mapController.move(_currentLocation!, 14.0); // Zoom level 14
+        _mapController.move(_currentLocation!, 17.0); // Zoom level 14
         _findNearestLocation();
       }
     } catch (e) {
@@ -196,6 +196,51 @@ class _LocationScreenState extends State<LocationScreen> {
     }
   }
 
+  /// Generate markers for all locations
+  List<Marker> _generateLocationMarkers() {
+    return _locations.map((location) {
+      final coords = location['location']!.split(',');
+      final lat = double.parse(coords[0]);
+      final lon = double.parse(coords[1]);
+
+      return Marker(
+        point: LatLng(lat, lon),
+        width: 40,
+        height: 40,
+        child: GestureDetector(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              builder: (context) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        location['location_name']!,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(location['details']!),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+          child: const Icon(
+            Icons.location_on,
+            color: Colors.green,
+            size: 40,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -208,7 +253,7 @@ class _LocationScreenState extends State<LocationScreen> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter: LatLng(0, 0), // Placeholder center
-              initialZoom: 2.0, // Default zoom
+              initialZoom: 10.0, // Default zoom
               onMapReady: () => setState(() => _isMapLoaded = true),
             ),
             children: [
@@ -217,9 +262,9 @@ class _LocationScreenState extends State<LocationScreen> {
                     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                 subdomains: ['a', 'b', 'c'],
               ),
-              if (_currentLocation != null)
-                MarkerLayer(
-                  markers: [
+              MarkerLayer(
+                markers: [
+                  if (_currentLocation != null)
                     Marker(
                       point: _currentLocation!,
                       width: 50,
@@ -231,8 +276,9 @@ class _LocationScreenState extends State<LocationScreen> {
                             color: Colors.blue, size: 50),
                       ),
                     ),
-                  ],
-                ),
+                  ..._generateLocationMarkers(),
+                ],
+              ),
               if (_nearestLocation != null)
                 MarkerLayer(
                   markers: [
@@ -243,10 +289,13 @@ class _LocationScreenState extends State<LocationScreen> {
                         double.parse(
                             _nearestLocation!['location']!.split(',')[1]),
                       ),
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Icons.location_on,
-                          color: Colors.red, size: 40),
+                      width: 50,
+                      height: 50,
+                      child: const Icon(
+                        Icons.location_pin,
+                        color: Colors.red,
+                        size: 40,
+                      ),
                     ),
                   ],
                 ),
@@ -255,34 +304,34 @@ class _LocationScreenState extends State<LocationScreen> {
                   polylines: [
                     Polyline(
                       points: _routePoints,
-                      color: Colors.blue,
-                      strokeWidth: 4.0,
+                      color: Colors.red,
+                      strokeWidth: 5,
                     ),
                   ],
                 ),
             ],
           ),
-          if (_isLoading || !_isMapLoaded)
-            const Center(
-              child: CircularProgressIndicator(),
+          if (_isLoading)
+            Container(
+              color: Colors.black38,
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _fetchRoute,
-        child: const Icon(Icons.directions),
-        tooltip: "Navigate to Nearest Location",
+        label: const Text(
+          "Find Route",
+          style: TextStyle(color: Colors.white),
+        ),
+        icon: const Icon(
+          Icons.directions,
+          color: Colors.white,
+        ),
+        backgroundColor: Colors.red[400],
       ),
-      bottomSheet: _nearestLocation != null
-          ? Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                "${_nearestLocation!['location_name']}: ${_nearestLocation!['details']}",
-                style: const TextStyle(fontSize: 16),
-              ),
-            )
-          : null,
     );
   }
 }

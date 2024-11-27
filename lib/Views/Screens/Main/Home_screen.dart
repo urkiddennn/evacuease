@@ -19,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 20),
           child: Column(
             children: [
               // Location Row
@@ -47,53 +47,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
-              // Button Group
+
               Container(
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.red),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_buttonLabels.length, (index) {
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedIndex =
-                              index; // Update selected button index
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        decoration: BoxDecoration(
-                          color: _selectedIndex == index
-                              ? Colors.red
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Text(
-                          _buttonLabels[index],
-                          style: TextStyle(
-                            color: _selectedIndex == index
-                                ? Colors.white
-                                : Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
+                height: 50,
+                child: Text("Weather"),
               ),
-              SizedBox(
-                height: 15,
-              ),
+              const SizedBox(height: 15),
+              // Button Group
 
               Container(
                 width: double.infinity,
