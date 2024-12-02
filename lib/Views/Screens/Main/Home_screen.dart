@@ -1,3 +1,4 @@
+import 'package:evacuease/Views/Screens/risk_analysis_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -91,30 +92,29 @@ class _HomeScreenState extends State<HomeScreen> {
     String weatherCondition = currentWeather!.weatherMain ?? "Unknown";
     double? temperature = currentWeather!.temperature?.celsius;
 
-    IconData weatherIcon;
-    Color iconColor;
+    String weatherIcon;
     double iconSize;
 
     // Assign weather icon based on condition
     switch (weatherCondition.toLowerCase()) {
       case 'rain':
-        weatherIcon = Icons.water_drop;
-        iconColor = Colors.lightBlue;
+        weatherIcon = "assets/icons/rainy-day.png";
+
         iconSize = 100;
         break;
       case 'clouds':
-        weatherIcon = Icons.cloud;
-        iconColor = Colors.grey;
+        weatherIcon = "assets/icons/cloudy-day.png";
+
         iconSize = 100;
         break;
       case 'clear':
-        weatherIcon = Icons.wb_sunny;
-        iconColor = Colors.amber;
+        weatherIcon = "assets/icons/sun.png";
+
         iconSize = 100;
         break;
       default:
-        weatherIcon = Icons.help;
-        iconColor = Colors.grey;
+        weatherIcon = "assets/icons/cloudy-day.png";
+
         iconSize = 100;
     }
 
@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 location,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -160,11 +160,15 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(width: 8),
-              Icon(
-                weatherIcon,
-                size: iconSize,
-                color: iconColor,
-              ),
+              Image.asset(
+                "${weatherIcon}",
+                width: iconSize,
+              )
+              // Icon(
+              // weatherIcon,
+              // size: iconSize,
+              //color: iconColor,
+              // ),
             ],
           ),
         ],
@@ -450,7 +454,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     height: 10,
                   ),
                   Center(
-                    child: Text("Show more"),
+                    child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => RiskAnalysisPage()));
+                        },
+                        child: Text("Show more")),
                   )
                 ],
               ),
@@ -474,7 +485,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _buildCategoryButton("Flood", "assets/icons/flood.png"),
-                  _buildCategoryButton("Warning", "assets/icons/warning.png"),
+                  _buildCategoryButton("Tsunami", "assets/icons/weather.png"),
+                  _buildCategoryButton("Landslide", "assets/icons/tape.png"),
                   _buildCategoryButton(
                       "Earthquake", "assets/icons/earthquake.png"),
                 ],
