@@ -23,34 +23,25 @@ class _LocationScreenState extends State<LocationScreen> {
   bool _isLoading = false;
   bool _isMapLoaded = false;
 
-  List<Map<String, String>> _locations = [
+  final _locations = [
     {
-      "location_name": "Tago Municipal Gymnasium",
-      "details": "Hello this is the Tago Gymnasium",
-      "location": "9.019543, 126.233583"
+      'location': '9.019536, 126.233597',
+      'location_name': 'Tago Gymnasium',
+      'details': 'Popular sports complex.',
+      'image_url':
+          "https://th.bing.com/th/id/OIP.rueUEQkui-TSGhjWq0I9UQHaFj?w=232&h=180&c=7&r=0&o=5&pid=1.7",
+      'travel_time': '15 mins',
     },
     {
-      "location_name": "Purisima National Highschool",
-      "details": "Hello this is the Purisima National Highschool",
-      "location": "9.015890, 126.235276"
+      'location': '9.015631, 126.234519',
+      'location_name': 'Tago Gymnasium',
+      'details': 'Popular sports complex.',
+      'image_url':
+          "https://th.bing.com/th/id/OIP.rueUEQkui-TSGhjWq0I9UQHaFj?w=232&h=180&c=7&r=0&o=5&pid=1.7",
+      'travel_time': '15 mins',
     },
-    {
-      "location_name": "Falcon National Highschool",
-      "details": "Hello this is the Falcon National Highschool",
-      "location": "9.018953, 126.232690"
-    },
-    {
-      "location_name": "Falcon Memorial Elementary School",
-      "details": "Hello this is the Falcon Memorial Elementary School",
-      "location": "9.021448, 126.232637"
-    },
-    {
-      "location_name": "NEMSU TANDAG",
-      "details": "NEMSU TANDAG",
-      "location": "9.03863, 126.21497"
-    }
+    // Add more locations here...
   ];
-
   Map<String, String>? _nearestLocation;
   StreamSubscription? _compassSubscription; // Compass subscription
 
@@ -218,13 +209,63 @@ class _LocationScreenState extends State<LocationScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        location['location_name']!,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  location['location_name']!,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  'Travel time: ${location['travel_time'] ?? 'N/A'}',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(location['details']!),
+                      const SizedBox(height: 16),
+                      Text(
+                        location['details'] ??
+                            'No additional details available',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              // Handle "Routes" button tap
+                            },
+                            child: const Text("Routes"),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context); // Dismiss modal
+                            },
+                            child: const Text("Close"),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(5.0),
+                        child: Image.network(
+                          location['image_url'] ??
+                              'https://via.placeholder.com/100',
+                          width: 150,
+                          height: 150,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ],
                   ),
                 );
