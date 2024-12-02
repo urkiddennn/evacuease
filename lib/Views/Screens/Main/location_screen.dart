@@ -219,9 +219,8 @@ class _LocationScreenState extends State<LocationScreen> {
                                   location['location_name']!,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 18),
+                                      fontSize: 21),
                                 ),
-                                const SizedBox(height: 5),
                                 Text(
                                   'Travel time: ${location['travel_time'] ?? 'N/A'}',
                                   style: const TextStyle(
@@ -250,7 +249,15 @@ class _LocationScreenState extends State<LocationScreen> {
                                   border: Border.all(
                                       width: 1.0, color: Colors.grey),
                                   borderRadius: BorderRadius.circular(15)),
-                              child: Center(child: Text("Routes")),
+                              child: Center(
+                                  child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Icon(Icons.route, size: 15),
+                                  Text("Routes"),
+                                ],
+                              )),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -265,7 +272,15 @@ class _LocationScreenState extends State<LocationScreen> {
                                   border: Border.all(
                                       width: 1.0, color: Colors.grey),
                                   borderRadius: BorderRadius.circular(15)),
-                              child: Center(child: Text("Close")),
+                              child: Center(
+                                  child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Icon(Icons.close, size: 15),
+                                  Text("Close"),
+                                ],
+                              )),
                             ),
                           ),
                         ],
