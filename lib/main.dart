@@ -2,6 +2,7 @@ import 'package:evacuease/Views/Screens/Main/Home_screen.dart';
 import 'package:evacuease/Views/Screens/Main/location_screen.dart';
 import 'package:evacuease/Views/Screens/Main/notification_screen.dart';
 import 'package:evacuease/Views/Screens/Main/user_screen.dart';
+import 'package:evacuease/Views/Screens/loading_screen.dart';
 import 'package:evacuease/main_screen.dart';
 import 'package:flutter/material.dart';
 //import 'package:evacuease/Views/Screens/Introduction/First_screen.dart';
@@ -25,9 +26,10 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      initialRoute: '/', // Starting route
+      initialRoute: '/loading_screen', // Starting route
       routes: {
-        '/': (context) => MainScreen(), // Starting route
+        '/': (context) => LoadingScreen(),
+        '/main_screen': (context) => MainScreen(), // Starting route
         '/Home_screen': (context) => HomeScreen(), // Home/Main Screen
         '/location_screen': (context) =>
             const LocationScreen(), // Example route

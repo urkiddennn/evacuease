@@ -19,11 +19,11 @@ class SigninScreen extends StatelessWidget {
           children: [
             Text(
               "Sign  New Account",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
             ),
             Text(
               "I agree to the term & conditions",
-              style: TextStyle(fontSize: 10, color: Colors.grey),
+              style: TextStyle(fontSize: 15, color: Colors.grey),
             ),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,

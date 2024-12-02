@@ -1,3 +1,4 @@
+import 'package:evacuease/main_screen.dart';
 import 'package:flutter/material.dart';
 
 class SignupScreen extends StatelessWidget {
@@ -6,7 +7,11 @@ class SignupScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String? selectedRole; // Variable to hold the selected role
-    final List<String> roles = ['Telaje', 'Bagong Lungsod', 'Dagokdok']; // List of roles
+    final List<String> roles = [
+      'Telaje',
+      'Bagong Lungsod',
+      'Dagokdok'
+    ]; // List of roles
     bool agreeToTerms = false; // Variable to track agreement to terms
 
     return Scaffold(
@@ -20,11 +25,11 @@ class SignupScreen extends StatelessWidget {
           children: [
             Text(
               "Sign Up New Account",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
             ),
             Text(
               "I agree to the term & conditions",
-              style: TextStyle(fontSize: 10, color: Colors.grey),
+              style: TextStyle(fontSize: 15, color: Colors.grey),
             ),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -124,30 +129,7 @@ class SignupScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 10),
                 // DropdownButton for selecting role
-                Container(
-                  padding: EdgeInsets.symmetric(vertical: 5, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      hint: Text('Select Role'), // Hint text
-                      value: selectedRole,
-                      isExpanded: true,
-                      onChanged: (String? newValue) {
-                        selectedRole = newValue; // Update the selected role
-                      },
-                      items:
-                          roles.map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
+
                 SizedBox(height: 10),
                 // Radio button for agreeing to terms and conditions
                 Row(
@@ -178,7 +160,7 @@ class SignupScreen extends StatelessWidget {
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => SignupScreen()));
+                              builder: (context) => MainScreen()));
 
                       // Navigate to Sign Up screen
                     },
