@@ -224,7 +224,8 @@ class _LocationScreenState extends State<LocationScreen> {
                                 const SizedBox(height: 5),
                                 Text(
                                   'Travel time: ${location['travel_time'] ?? 'N/A'}',
-                                  style: const TextStyle(fontSize: 14),
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -240,18 +241,32 @@ class _LocationScreenState extends State<LocationScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              // Handle "Routes" button tap
-                            },
-                            child: const Text("Routes"),
+                          InkWell(
+                            onTap: () {},
+                            child: Container(
+                              width: 80,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                  border: Border.all(
+                                      width: 1.0, color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(15)),
+                              child: Center(child: Text("Routes")),
+                            ),
                           ),
                           const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context); // Dismiss modal
+                          InkWell(
+                            onTap: () {
+                              Navigator.pop(context);
                             },
-                            child: const Text("Close"),
+                            child: Container(
+                              width: 80,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                  border: Border.all(
+                                      width: 1.0, color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(15)),
+                              child: Center(child: Text("Close")),
+                            ),
                           ),
                         ],
                       ),
