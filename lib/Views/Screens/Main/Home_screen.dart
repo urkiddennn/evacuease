@@ -1,9 +1,9 @@
-import 'package:evacuease/Views/Screens/risk_analysis_page.dart';
+// lib/Views/Screens/Main/home_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:weather/weather.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:evacuease/Controllers/home_controller.dart';
+import 'package:evacuease/Views/Screens/risk_analysis_page.dart';
+import 'package:evacuease/Models/home_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,72 +13,62 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String apiKey = '6ecafe65255292c779f938f49600c1a1';
-  late WeatherFactory weatherFactory;
-  Weather? currentWeather;
-  Position? currentPosition;
+  final HomeController _controller = HomeController();
 
   @override
   void initState() {
     super.initState();
-    weatherFactory = WeatherFactory(apiKey);
-    _fetchCurrentLocationAndWeather();
+    _controller.fetchCurrentLocationAndWeather().then((_) {
+      setState(() {});
+    });
   }
 
-  Future<void> _fetchCurrentLocationAndWeather() async {
-    try {
-      // Get current location
-      Position position = await _determinePosition();
+  @override
+  Widget build(BuildContext context) {
+    final weatherData = _controller.getWeatherData();
 
-      setState(() {
-        currentPosition = position;
-      });
-
-      // Fetch weather for the current location
-      Weather weather = await weatherFactory.currentWeatherByLocation(
-        position.latitude,
-        position.longitude,
-      );
-
-      setState(() {
-        currentWeather = weather;
-      });
-    } catch (e) {
-      print('Error fetching location or weather: $e');
-    }
+    return SafeArea(
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+            child: Column(
+              children: [
+                // Weather Info
+                Container(
+                  width: double.infinity,
+                  height: 120,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 3,
+                        spreadRadius: 3,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: _buildWeatherInfo(weatherData),
+                ),
+                const SizedBox(height: 15),
+                _buildStarterSection(),
+                const SizedBox(height: 15),
+                _buildRiskAreaSection(),
+                const SizedBox(height: 15),
+                _buildOfflineRiskMapSection(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  Future<Position> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // Check if location services are enabled
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception('Location services are disabled.');
-    }
-
-    // Check location permissions
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        throw Exception('Location permissions are denied.');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      throw Exception(
-          'Location permissions are permanently denied, we cannot request permissions.');
-    }
-
-    // Get the current position
-    return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-  }
-
-  Widget _buildWeatherInfo() {
-    if (currentWeather == null) {
+  Widget _buildWeatherInfo(WeatherData? weatherData) {
+    if (weatherData == null) {
       return const Text(
         'Loading weather...',
         style: TextStyle(
@@ -88,49 +78,18 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    String location = "Iran Tago"; // Replace with actual location if available
-    String weatherCondition = currentWeather!.weatherMain ?? "Unknown";
-    double? temperature = currentWeather!.temperature?.celsius;
-
-    String weatherIcon;
-    double iconSize;
-
-    // Assign weather icon based on condition
-    switch (weatherCondition.toLowerCase()) {
-      case 'rain':
-        weatherIcon = "assets/icons/rainy-day.png";
-
-        iconSize = 100;
-        break;
-      case 'clouds':
-        weatherIcon = "assets/icons/cloudy-day.png";
-
-        iconSize = 100;
-        break;
-      case 'clear':
-        weatherIcon = "assets/icons/sun.png";
-
-        iconSize = 100;
-        break;
-      default:
-        weatherIcon = "assets/icons/cloudy-day.png";
-
-        iconSize = 100;
-    }
-
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Location and weather description
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                location,
+                weatherData.location,
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -138,14 +97,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                weatherCondition,
+                weatherData.weatherCondition,
                 style: const TextStyle(
                   fontSize: 14,
                   color: Colors.grey,
                 ),
               ),
               Text(
-                '${temperature?.toStringAsFixed(1) ?? "--"} °C',
+                '${weatherData.temperature?.toStringAsFixed(1) ?? "--"} °C',
                 style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
@@ -154,25 +113,166 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          // Temperature and icon
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(width: 8),
-              Image.asset(
-                "${weatherIcon}",
-                width: iconSize,
-              )
-              // Icon(
-              // weatherIcon,
-              // size: iconSize,
-              //color: iconColor,
-              // ),
-            ],
+          Image.asset(
+            weatherData.weatherIcon,
+            width: 100,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStarterSection() {
+    return Container(
+      width: double.infinity,
+      height: 100,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 3,
+            spreadRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Starter",
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  "Things to prepare when has disaster?",
+                  style: TextStyle(color: Colors.grey),
+                )
+              ],
+            ),
+            const Icon(
+              Icons.arrow_right,
+              size: 50,
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRiskAreaSection() {
+    return Column(
+      children: [
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            "Risk Area",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 15),
+        ..._controller.riskAreas
+            .map((area) => _buildRiskAreaItem(area))
+            .toList(),
+        const SizedBox(height: 10),
+        Center(
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RiskAnalysisPage(),
+                ),
+              );
+            },
+            child: const Text("Show more"),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRiskAreaItem(RiskArea area) {
+    return Container(
+      width: double.infinity,
+      height: 70,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey,
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(50),
+                color: area.riskColor,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  area.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                Text(
+                  area.riskLevel,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOfflineRiskMapSection() {
+    return Column(
+      children: [
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            "Offline Risk Map",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 15),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildCategoryButton("Flood", "assets/icons/flood.png"),
+            _buildCategoryButton("Tsunami", "assets/icons/weather.png"),
+            _buildCategoryButton("Landslide", "assets/icons/tape.png"),
+            _buildCategoryButton("Earthquake", "assets/icons/earthquake.png"),
+          ],
+        ),
+      ],
     );
   }
 
@@ -191,309 +291,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Image.asset(assetPath, width: 30),
           Text(label, style: TextStyle(color: Colors.red[500])),
         ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
-          child: Column(
-            children: [
-              // Location Row
-
-              SizedBox(
-                height: 10,
-              ),
-              // Weather Info
-              Container(
-                width: double.infinity,
-                height: 120,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black
-                          .withOpacity(0.05), // Shadow color with opacity
-                      blurRadius: 3, // Softness of the shadow
-                      spreadRadius: 3, // How much the shadow spreads
-                      offset: Offset(0, 2), // Position of the shadow (x, y)
-                    ),
-                  ],
-                ),
-                child: _buildWeatherInfo(),
-              ),
-              SizedBox(
-                height: 15,
-              ),
-              Container(
-                width: double.infinity,
-                height: 100,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black
-                          .withOpacity(0.05), // Shadow color with opacity
-                      blurRadius: 3, // Softness of the shadow
-                      spreadRadius: 3, // How much the shadow spreads
-                      offset: Offset(0, 2), // Position of the shadow (x, y)
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Starter",
-                            style: TextStyle(
-                                fontSize: 30, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "Things to prepare when has disaster?",
-                            style: TextStyle(color: Colors.grey),
-                          )
-                        ],
-                      ),
-                      Icon(
-                        Icons.arrow_right,
-                        size: 50,
-                      )
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 15,
-              ),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Risk Area",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-              ),
-              SizedBox(
-                height: 15,
-              ),
-
-              // Risk Analysis Section
-              Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors
-                              .grey, // Change to your desired border color
-                          width: 1.0, // Change to your desired border width
-                        ),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                color: Colors.red),
-                          ),
-                          SizedBox(
-                            width: 15,
-                          ),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Tago Iran",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20),
-                                ),
-                                Text(
-                                  "Risk High",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: Colors.grey),
-                                )
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: double.infinity,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors
-                              .grey, // Change to your desired border color
-                          width: 1.0, // Change to your desired border width
-                        ),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                color: Colors.orange),
-                          ),
-                          SizedBox(
-                            width: 15,
-                          ),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Bangsud",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20),
-                                ),
-                                Text(
-                                  "Risk mid",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: Colors.grey),
-                                )
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: double.infinity,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors
-                              .grey, // Change to your desired border color
-                          width: 1.0, // Change to your desired border width
-                        ),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                color: Colors.yellow),
-                          ),
-                          SizedBox(
-                            width: 15,
-                          ),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Anahao ",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20),
-                                ),
-                                Text(
-                                  "Risk normal",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: Colors.grey),
-                                )
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Center(
-                    child: InkWell(
-                        onTap: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => RiskAnalysisPage()));
-                        },
-                        child: Text("Show more")),
-                  )
-                ],
-              ),
-              SizedBox(
-                height: 15,
-              ),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Offline Risk Map",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-              ),
-              SizedBox(
-                height: 15,
-              ),
-
-              // Category Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildCategoryButton("Flood", "assets/icons/flood.png"),
-                  _buildCategoryButton("Tsunami", "assets/icons/weather.png"),
-                  _buildCategoryButton("Landslide", "assets/icons/tape.png"),
-                  _buildCategoryButton(
-                      "Earthquake", "assets/icons/earthquake.png"),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

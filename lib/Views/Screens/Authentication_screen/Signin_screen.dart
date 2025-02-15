@@ -1,112 +1,178 @@
+import 'dart:convert';
+import 'package:evacuease/main_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:evacuease/Views/Screens/loading_screen.dart';
+import 'package:http/http.dart' as http;
+import 'package:bcrypt/bcrypt.dart'; // For password hashing and comparison
 
-class SigninScreen extends StatelessWidget {
-  bool agreeToTerms = false;
+class SigninScreen extends StatefulWidget {
+  const SigninScreen({super.key});
 
-  SigninScreen({super.key});
+  @override
+  _SigninScreenState createState() => _SigninScreenState();
+}
+
+class _SigninScreenState extends State<SigninScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool isLoading = false;
+  bool isPasswordVisible = false; // Variable to toggle password visibility
+
+  Future<void> _signIn() async {
+    final String email = _emailController.text.trim();
+    final String password = _passwordController.text.trim();
+
+    // Validate email and password
+    if (email.isEmpty || password.isEmpty) {
+      _showDialog("Error", "Please fill in all fields.");
+      return;
+    }
+
+    // Validate email format
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showDialog("Error", "Please enter a valid email address.");
+      return;
+    }
+
+    setState(() {
+      isLoading = true; // Show loading indicator
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://admin-evacu-ease.vercel.app/api/users'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['success'] == true) {
+          final users = data['data'] as List;
+
+          // Find the user with the matching email
+          final user = users.firstWhere(
+            (user) => user['email'] == email,
+            orElse: () => null,
+          );
+
+          if (user != null) {
+            // Compare the entered password with the hashed password
+            final isPasswordValid = BCrypt.checkpw(password, user['password']);
+
+            if (isPasswordValid) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => MainScreen()),
+              );
+            } else {
+              _showDialog("Error", "Invalid email or password.");
+            }
+          } else {
+            _showDialog("Error", "User not found.");
+          }
+        } else {
+          _showDialog("Error", "Server error. Please try again.");
+        }
+      } else {
+        _showDialog("Error", "Failed to connect to the server.");
+      }
+    } catch (e) {
+      _showDialog("Error", "An error occurred: $e");
+    } finally {
+      setState(() {
+        isLoading = false; // Hide loading indicator
+      });
+    }
+  }
+
+  void _showDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Sign Up"),
-      ),
+      appBar: AppBar(title: Text("Sign In")),
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Sign  New Account",
+            const Text(
+              "Sign In",
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
             ),
-            Text(
-              "I agree to the term & conditions",
-              style: TextStyle(fontSize: 15, color: Colors.grey),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                hintText: 'Email',
+                filled: true,
+                fillColor: Colors.grey[300],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 30),
-
-                SizedBox(height: 10),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Email',
-                    filled: true,
-                    fillColor: Colors.grey[300],
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide(color: Colors.red, width: 2.0),
-                    ),
-                  ),
-                  style: TextStyle(fontSize: 16),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _passwordController,
+              obscureText: !isPasswordVisible,
+              decoration: InputDecoration(
+                hintText: 'Password',
+                filled: true,
+                fillColor: Colors.grey[300],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none,
                 ),
-                SizedBox(height: 10),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Password',
-                    filled: true,
-                    fillColor: Colors.grey[300],
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide(color: Colors.red, width: 2.0),
-                    ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
                   ),
-                  style: TextStyle(fontSize: 16),
+                  onPressed: () {
+                    setState(() {
+                      isPasswordVisible = !isPasswordVisible;
+                    });
+                  },
                 ),
-                SizedBox(height: 10),
-
-                // Radio button for agreeing to terms and conditions
-
-                SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  height: 55,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => LoadingScreen()));
-
-                      // Navigate to Sign Up screen
-                    },
-                    child: Text(
-                      'Sign Up',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-                // You can add a submit button or any other widgets here
-              ],
+              ),
             ),
+            const SizedBox(height: 20),
+            isLoading
+                ? Center(child: CircularProgressIndicator())
+                : SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _signIn,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                    ),
+                  ),
           ],
         ),
       ),

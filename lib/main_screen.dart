@@ -1,7 +1,7 @@
-import 'package:evacuease/Views/Screens/Main/Home_screen.dart';
-import 'package:evacuease/Views/Screens/Main/location_screen.dart';
-import 'package:evacuease/Views/Screens/Main/notification_screen.dart';
-import 'package:evacuease/Views/Screens/Main/user_screen.dart';
+import 'package:evacuease/Views/Screens/main/home_screen.dart';
+import 'package:evacuease/Views/Screens/main/location_screen.dart';
+import 'package:evacuease/Views/Screens/main/notification_screen.dart';
+import 'package:evacuease/Views/Screens/main/user_screen.dart';
 import 'package:flutter/material.dart';
 
 class MainScreen extends StatefulWidget {

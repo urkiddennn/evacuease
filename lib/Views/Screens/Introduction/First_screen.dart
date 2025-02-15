@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:evacuease/Views/Screens/Authentication_screen/Signin_screen.dart';
-import 'package:evacuease/Views/Screens/Authentication_screen/Signup_screen.dart';
+import 'package:evacuease/Views/Screens/authentication_screen/Signin_screen.dart';
+import 'package:evacuease/Views/Screens/authentication_screen/Signup_screen.dart';
 import 'package:evacuease/Views/Screens/loading_screen.dart';
 
 class FirstScreen extends StatefulWidget {
