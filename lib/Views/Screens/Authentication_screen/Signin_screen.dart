@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 import 'package:evacuease/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:bcrypt/bcrypt.dart'; // For password hashing and comparison
+import 'package:bcrypt/bcrypt.dart';
+import 'package:provider/provider.dart'; // For password hashing and comparison
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -59,6 +61,11 @@ class _SigninScreenState extends State<SigninScreen> {
             final isPasswordValid = BCrypt.checkpw(password, user['password']);
 
             if (isPasswordValid) {
+              // Update login state
+              final authProvider =
+                  Provider.of<AuthProvider>(context, listen: false);
+              await authProvider.login();
+
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => MainScreen()),

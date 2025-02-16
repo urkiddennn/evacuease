@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:evacuease/Controllers/auth_provider/auth_provider.dart'; // Import the AuthProvider
 
 class UserScreen extends StatelessWidget {
   const UserScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Settings"),
@@ -41,7 +45,10 @@ class UserScreen extends StatelessWidget {
                 icon: Icons.logout,
                 title: "Logout",
                 titleColor: Colors.red,
-                onTap: () {},
+                onTap: () async {
+                  await authProvider.logout();
+                  Navigator.pushReplacementNamed(context, '/signin');
+                },
               ),
               const SizedBox(height: 20),
               const Text(

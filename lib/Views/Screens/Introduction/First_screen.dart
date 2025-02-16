@@ -37,16 +37,24 @@ class _FirstScreenState extends State<FirstScreen> {
 
   void nextStep() {
     setState(() {
-      if (currentStep < onboardingData.length) {
-        currentStep++;
+      if (currentStep < onboardingData.length - 1) {
+        currentStep++; // Increment only if not at the last step
       } else {
-        // Implement navigation to Sign Up / Sign In screen or display options
+        // If at the last step, navigate to Sign Up / Sign In screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => SignupScreen()),
+        );
       }
     });
   }
 
   void skipOnboarding() {
-    // Implement skip functionality (e.g., go directly to Sign Up / Sign In)
+    // Navigate directly to Sign Up / Sign In screen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => SignupScreen()),
+    );
   }
 
   @override
@@ -88,10 +96,7 @@ class _FirstScreenState extends State<FirstScreen> {
             ),
 
             // Step Indicator
-
-            SizedBox(
-              height: 20,
-            ),
+            SizedBox(height: 20),
             // Conditional display for last screen
             currentStep == onboardingData.length - 1
                 ? Column(
@@ -105,11 +110,11 @@ class _FirstScreenState extends State<FirstScreen> {
                         child: TextButton(
                           onPressed: () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => SignupScreen()));
-
-                            // Navigate to Sign Up screen
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SignupScreen(),
+                              ),
+                            );
                           },
                           child: Text(
                             'Sign Up',
@@ -127,15 +132,18 @@ class _FirstScreenState extends State<FirstScreen> {
                         child: TextButton(
                           onPressed: () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => SigninScreen()));
-                            // Navigate to Sign Up screen
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SigninScreen(),
+                              ),
+                            );
                           },
                           child: Text(
                             'Sign In',
                             style: TextStyle(
-                                color: Colors.red, fontWeight: FontWeight.bold),
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -145,12 +153,7 @@ class _FirstScreenState extends State<FirstScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => LoadingScreen()));
-                        },
+                        onPressed: skipOnboarding,
                         child: Text(
                           'Skip',
                           style: TextStyle(color: Colors.black),

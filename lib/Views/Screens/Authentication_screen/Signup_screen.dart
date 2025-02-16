@@ -1,9 +1,11 @@
+import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:evacuease/main_screen.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart'; // For loading indicator
-import 'package:bcrypt/bcrypt.dart'; // For password hashing
+import 'package:bcrypt/bcrypt.dart';
+import 'package:provider/provider.dart'; // For password hashing
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -91,36 +93,35 @@ class _SignupScreenState extends State<SignupScreen> {
       isLoading = true; // Show loading indicator
     });
 
-    final url = Uri.parse('https://admin-evacu-ease.vercel.app/api/users');
     try {
       final response = await http.post(
-        url,
+        Uri.parse('https://admin-evacu-ease.vercel.app/api/users'),
         headers: {
           'Content-Type': 'application/json',
         },
         body: json.encode({
           'username': _fullNameController.text,
           'email': _emailController.text,
-          'password': hashedPassword, // Send the hashed password
-          'role': 'user', // Assuming the role is always 'user' for sign-up
-          'status':
-              'active', // Assuming the status is always 'active' for sign-up
+          'password': hashedPassword,
+          'role': 'user',
+          'status': 'active',
           'location': selectedRole,
           'number': _numberController.text,
         }),
       );
 
-      // Debugging: Print the response status code and body
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = json.decode(response.body);
         if (responseData['success'] == true) {
+          // Update login state
+          final authProvider =
+              Provider.of<AuthProvider>(context, listen: false);
+          await authProvider.login();
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Sign up successful!')),
           );
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => MainScreen()),
           );
@@ -140,8 +141,6 @@ class _SignupScreenState extends State<SignupScreen> {
         );
       }
     } catch (e) {
-      // Debugging: Print the exception
-      print('Exception: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('An error occurred: $e')),
       );
