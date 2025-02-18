@@ -7,7 +7,7 @@ class UserScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authProvider = Provider.of<AuthProviders>(context);
 
     return Scaffold(
       appBar: AppBar(

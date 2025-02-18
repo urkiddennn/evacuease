@@ -1,11 +1,14 @@
-import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 import 'package:evacuease/main_screen.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart'; // For loading indicator
-import 'package:bcrypt/bcrypt.dart';
-import 'package:provider/provider.dart'; // For password hashing
+import 'package:bcrypt/bcrypt.dart'; // For password hashing
+import 'package:http/http.dart' as http;
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -115,7 +118,7 @@ class _SignupScreenState extends State<SignupScreen> {
         if (responseData['success'] == true) {
           // Update login state
           final authProvider =
-              Provider.of<AuthProvider>(context, listen: false);
+              Provider.of<AuthProviders>(context, listen: false);
           await authProvider.login();
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -150,6 +153,48 @@ class _SignupScreenState extends State<SignupScreen> {
       });
     }
   }
+
+  // Future<void> _signInWithGoogle() async {
+  //   try {
+  //     final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+  //     final GoogleSignInAuthentication gAuth = await googleUser!.authentication;
+
+  //     final credential = GoogleAuthProvider.credential(
+  //       accessToken: gAuth.accessToken,
+  //       idToken: gAuth.idToken,
+  //     );
+
+  //     return await FirebaseAuth.instance.signInWithCredential(credential);
+
+  //     // if (googleUser != null) {
+  //     //   final GoogleSignInAuthentication googleAuth =
+  //     //       await googleUser.authentication;
+  //     //   final credential = GoogleAuthProvider.credential(
+  //     //     accessToken: googleAuth.accessToken,
+  //     //     idToken: googleAuth.idToken,
+  //     //   );
+  //     //   final UserCredential userCredential =
+  //     //       await FirebaseAuth.instance.signInWithCredential(credential);
+
+  //     //   // Update login state
+  //     //   final authProvider = Provider.of<AuthProviders>(context, listen: false);
+  //     //   await authProvider.login();
+
+  //     //   ScaffoldMessenger.of(context).showSnackBar(
+  //     //     const SnackBar(content: Text('Google Sign-In successful!')),
+  //     //   );
+  //     //   Navigator.pushReplacement(
+  //     //     context,
+  //     //     MaterialPageRoute(builder: (context) => MainScreen()),
+  //     //   );
+  //     // }
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Error signing in with Google: $e')),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -364,7 +409,6 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 10),
                   // Radio button for agreeing to terms and conditions
                   Row(
@@ -402,6 +446,46 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                           ),
                         ),
+                  const SizedBox(height: 20),
+                  // Google Sign-In Button
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final authService = AuthService();
+                        final userCredential =
+                            await authService.signInWithGoogle();
+                        if (userCredential != null) {
+                          // Navigate to the main screen or update the UI
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => MainScreen()),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/icons/google.png',
+                              height: 24,
+                            ),
+                            const SizedBox(width: 10),
+                            const Text('Sign in with Google'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -409,5 +493,33 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       ),
     );
+  }
+}
+
+class AuthService {
+  
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
+      return userCredential;
+    } catch (e) {
+      print("Error signing in with Google: $e");
+      return null;
+    }
   }
 }

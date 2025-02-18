@@ -24,7 +24,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
     await Future.delayed(const Duration(seconds: 3));
 
     // Access the AuthProvider
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProviders>(context, listen: false);
 
     // Check if the user is already logged in
     await authProvider.checkLoginStatus();

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "804738345143",
+    "project_id": "evacuease",
+    "storage_bucket": "evacuease.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:804738345143:android:8427e5bfc4046f50548532",
+        "android_client_info": {
+          "package_name": "com.example.evacuease"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDQjd1yt2_V9EYBATLHOqAGEvRtBCDGws"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

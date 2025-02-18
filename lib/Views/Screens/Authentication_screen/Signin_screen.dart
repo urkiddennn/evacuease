@@ -63,7 +63,7 @@ class _SigninScreenState extends State<SigninScreen> {
             if (isPasswordValid) {
               // Update login state
               final authProvider =
-                  Provider.of<AuthProvider>(context, listen: false);
+                  Provider.of<AuthProviders>(context, listen: false);
               await authProvider.login();
 
               Navigator.pushReplacement(
