@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -49,6 +51,7 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   List<Messages> _apiMessages = [];
   bool _isLoading = true;
+  late Timer _refreshTimer;
 
   @override
   void initState() {
@@ -56,6 +59,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
     initializeNotifications();
     _fetchMessagesFromAPI();
     _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer.cancel(); // Cancel the timer to prevent memory leaks
+    super.dispose();
   }
 
   Future<void> _fetchMessagesFromAPI() async {
@@ -70,17 +79,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
         newMessages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (!_areListsEqual(_apiMessages, newMessages)) {
-          setState(() {
-            _apiMessages = newMessages;
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _apiMessages = newMessages;
+              _isLoading = false;
+            });
 
-          if (newMessages.isNotEmpty) {
-            Messages latestMessage = newMessages.first;
-            showNotification(
-              'New Message: ${latestMessage.subject}',
-              latestMessage.message,
-            );
+            if (newMessages.isNotEmpty) {
+              Messages latestMessage = newMessages.first;
+              showNotification(
+                'New Message: ${latestMessage.subject}',
+                latestMessage.message,
+              );
+            }
           }
         }
       } else {
@@ -88,7 +99,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching messages: $e');
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -101,15 +114,38 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _startAutoRefresh() {
-    Future.delayed(const Duration(seconds: 10), () async {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
       await _fetchMessagesFromAPI();
-      _startAutoRefresh();
     });
   }
 
   String formatTime(String timestamp) {
     DateTime dateTime = DateTime.parse(timestamp).toLocal();
-    return DateFormat('MMM d, h:mm a').format(dateTime);
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} mins ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hrs ago';
+    } else {
+      return '${difference.inDays} days ago';
+    }
+  }
+
+  IconData getIconForType(String type) {
+    switch (type.toLowerCase()) {
+      case 'warning':
+        return Icons.warning; // Yellow warning triangle
+      case 'alert':
+        return Icons.error; // Red alert/exclamation mark
+      case 'immediately':
+        return Icons.priority_high; // High-priority icon
+      default:
+        return Icons.notification_important; // Default notification icon
+    }
   }
 
   @override
@@ -143,56 +179,60 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     itemBuilder: (context, index) {
                       Messages message = _apiMessages[index];
                       return GestureDetector(
-                          onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      MessageDetailScreen(message: message),
-                                ),
-                              ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                                border: Border(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                MessageDetailScreen(message: message),
+                          ),
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border(
                               bottom: BorderSide(
                                 color: Colors.grey[300]!,
                                 width: 1.0,
                               ),
-                            )),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.warning,
-                                      color: Colors.red[600],
-                                      size: 20,
-                                    ),
-                                    SizedBox(width: 10),
-                                    Text(
-                                      "${message.subject}",
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Spacer(),
-                                    Text(
-                                      formatTime(message.createdAt),
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  message.message,
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
                             ),
-                          ));
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    getIconForType(message.type),
+                                    color: Colors.red[600],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "${message.subject}",
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    formatTime(message.createdAt),
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                message.message,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
                     },
                   ),
       ),
@@ -200,41 +240,72 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 }
 
-String formatTime(String timestamp) {
-  DateTime dateTime = DateTime.parse(timestamp).toLocal();
-  final now = DateTime.now();
-  final difference = now.difference(dateTime);
-
-  if (difference.inMinutes < 1) {
-    return 'Just now';
-  } else if (difference.inMinutes < 60) {
-    return '${difference.inMinutes} mins ago';
-  } else if (difference.inHours < 24) {
-    return '${difference.inHours} hrs ago';
-  } else {
-    return '${difference.inDays} days ago';
-  }
-}
-
 class MessageDetailScreen extends StatelessWidget {
   final Messages message;
   const MessageDetailScreen({super.key, required this.message});
 
+  String formatTime(String timestamp) {
+    DateTime dateTime = DateTime.parse(timestamp).toLocal();
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} mins ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hrs ago';
+    } else {
+      return '${difference.inDays} days ago';
+    }
+  }
+
+  IconData getIconForType(String type) {
+    switch (type.toLowerCase()) {
+      case 'warning':
+        return Icons.warning; // Yellow warning triangle
+      case 'alert':
+        return Icons.error; // Red alert/exclamation mark
+      case 'immediately':
+        return Icons.priority_high; // High-priority icon
+      default:
+        return Icons.notification_important; // Default notification icon
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(message.subject)),
+      appBar: AppBar(
+        title: Text(
+          message.subject,
+          style: const TextStyle(color: Colors.black87),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "${message.type}",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  getIconForType(message.type),
+                  color: Colors.red[600],
+                  size: 24,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  "${message.type}",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Text(
@@ -246,7 +317,6 @@ class MessageDetailScreen extends StatelessWidget {
               message.message,
               style: const TextStyle(fontSize: 16),
             ),
-            //deletebutton
           ],
         ),
       ),

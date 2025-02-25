@@ -1,3 +1,4 @@
+import 'package:evacuease/routes/route_names.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:evacuease/Controllers/auth_provider/auth_provider.dart'; // Import the AuthProvider
@@ -42,14 +43,16 @@ class UserScreen extends StatelessWidget {
                 onTap: () {},
               ),
               _buildListTile(
-                icon: Icons.logout,
-                title: "Logout",
-                titleColor: Colors.red,
-                onTap: () async {
-                  await authProvider.logout();
-                  Navigator.pushReplacementNamed(context, '/signin');
-                },
-              ),
+                  icon: Icons.logout,
+                  title: "Logout",
+                  titleColor: Colors.red,
+                  onTap: () async {
+                    final authProvider =
+                        Provider.of<AuthProviders>(context, listen: false);
+                    await authProvider.logout();
+                    Navigator.pushReplacementNamed(
+                        context, RouteNames.firstScreen);
+                  }),
               const SizedBox(height: 20),
               const Text(
                 "Feedback",

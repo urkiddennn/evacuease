@@ -5,19 +5,29 @@ import 'package:evacuease/Views/Screens/main/user_screen.dart';
 import 'package:flutter/material.dart';
 
 class MainScreen extends StatefulWidget {
+  final int initialIndex; // Add parameter for initial page index
+
+  const MainScreen({super.key, this.initialIndex = 0}); // Default to 0 (Home)
+
   @override
   _MainScreenState createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentPageIndex = 0;
+  late int _currentPageIndex; // Use late to initialize in initState
 
   final List<Widget> _pages = [
     HomeScreen(),
     LocationScreen(),
     NotificationScreen(),
-    UserScreen()
+    UserScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPageIndex = widget.initialIndex; // Set initial index from parameter
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +49,9 @@ class _MainScreenState extends State<MainScreen> {
             label: "Home",
           ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.location_on), label: "Location"),
+            icon: Icon(Icons.location_on),
+            label: "Location",
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
             label: "Notification",

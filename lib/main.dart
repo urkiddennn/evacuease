@@ -21,15 +21,17 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) =>
           AuthProviders(), // Use the updated AuthProviders class
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'EvacuEase',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
-          useMaterial3: true,
+      child: SafeArea(
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'EvacuEase',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+            useMaterial3: true,
+          ),
+          initialRoute: RouteNames.loading, // Set initial route
+          onGenerateRoute: RouteGenerator.generateRoute, // Use RouteGenerator
         ),
-        initialRoute: RouteNames.loading, // Set initial route
-        onGenerateRoute: RouteGenerator.generateRoute, // Use RouteGenerator
       ),
     );
   }

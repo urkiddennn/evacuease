@@ -69,8 +69,8 @@ class LocationController {
             "https://admin-evacu-ease.vercel.app/api/locations"), // Fix the typo
       );
 
-      print("Response Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      // print("Response Code: ${response.statusCode}");
+      // print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

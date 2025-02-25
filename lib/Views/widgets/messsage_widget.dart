@@ -6,6 +6,21 @@ import '../Screens/main/notification_screen.dart';
 class MessageDetailScreen extends StatelessWidget {
   final Messages message;
   const MessageDetailScreen({super.key, required this.message});
+  String formatTime(String timestamp) {
+    DateTime dateTime = DateTime.parse(timestamp).toLocal();
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} mins ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hrs ago';
+    } else {
+      return '${difference.inDays} days ago';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

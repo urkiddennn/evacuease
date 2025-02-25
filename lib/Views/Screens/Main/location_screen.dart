@@ -1,5 +1,3 @@
-// lib/Views/Screens/Main/location_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,7 +8,7 @@ class LocationScreen extends StatefulWidget {
   const LocationScreen({Key? key}) : super(key: key);
 
   @override
-  State<LocationScreen> createState() => _LocationScreenState();
+  State createState() => _LocationScreenState();
 }
 
 class _LocationScreenState extends State<LocationScreen> {
@@ -22,29 +20,35 @@ class _LocationScreenState extends State<LocationScreen> {
   void initState() {
     super.initState();
     _controller.startCompass((direction) {
-      setState(() {
-        _controller.facingDirection = direction;
-      });
+      if (mounted) {
+        setState(() {
+          _controller.facingDirection = direction;
+        });
+      }
     });
     _controller.getCurrentLocation((isLoading) {
-      setState(() {
-        _controller.isLoading = isLoading;
-      });
-      if (_controller.currentLocation != null) {
-        _mapController.move(_controller.currentLocation!, 17.0);
-        _controller.fetchLocations((isLoading) {
-          setState(() {
-            _controller.isLoading = isLoading;
-          });
-          _controller.findNearestLocation();
+      if (mounted) {
+        setState(() {
+          _controller.isLoading = isLoading;
         });
+        if (_controller.currentLocation != null) {
+          _mapController.move(_controller.currentLocation!, 17.0);
+          _controller.fetchLocations((isLoading) {
+            if (mounted) {
+              setState(() {
+                _controller.isLoading = isLoading;
+              });
+              _controller.findNearestLocation();
+            }
+          });
+        }
       }
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.dispose(); // Ensure all resources are released
     super.dispose();
   }
 
@@ -100,7 +104,7 @@ class _LocationScreenState extends State<LocationScreen> {
                               Container(
                                 height: 50,
                                 width: 40,
-                                padding: EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(6),
@@ -146,26 +150,6 @@ class _LocationScreenState extends State<LocationScreen> {
                     }).toList(),
                   ],
                 ),
-                // if (_controller.nearestLocation != null)
-                //   MarkerLayer(
-                //     markers: [
-                //       Marker(
-                //         point: LatLng(
-                //           double.parse(_controller.nearestLocation!['location']!
-                //               .split(',')[0]),
-                //           double.parse(_controller.nearestLocation!['location']!
-                //               .split(',')[1]),
-                //         ),
-                //         width: 50,
-                //         height: 50,
-                //         child: const Icon(
-                //           Icons.location_pin,
-                //           color: Colors.red,
-                //           size: 40,
-                //         ),
-                //       ),
-                //     ],
-                //   ),
                 if (_controller.routePoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
@@ -193,9 +177,11 @@ class _LocationScreenState extends State<LocationScreen> {
         onPressed: () async {
           try {
             await _controller.fetchRoute((isLoading) {
-              setState(() {
-                _controller.isLoading = isLoading;
-              });
+              if (mounted) {
+                setState(() {
+                  _controller.isLoading = isLoading;
+                });
+              }
             });
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(

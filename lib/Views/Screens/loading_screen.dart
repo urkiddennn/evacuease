@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:evacuease/Controllers/auth_provider/auth_provider.dart'; // Import the AuthProvider
-import 'package:evacuease/routes/route_names.dart'; // Import RouteNames
-import 'package:evacuease/Views/Screens/Introduction/first_screen.dart'; // Import FirstScreen
-import 'package:evacuease/main_screen.dart'; // Import MainScreen
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:evacuease/routes/route_names.dart';
+import 'package:evacuease/Views/Screens/Introduction/first_screen.dart';
+import 'package:evacuease/main_screen.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -20,21 +19,17 @@ class _LoadingScreenState extends State<LoadingScreen> {
   }
 
   Future<void> _checkLoginStatus() async {
-    // Simulate a delay for loading
+    // Simulate a delay for loading (optional, can remove if not needed)
     await Future.delayed(const Duration(seconds: 3));
 
-    // Access the AuthProvider
-    final authProvider = Provider.of<AuthProviders>(context, listen: false);
+    // Check Firebase authentication state directly
+    final User? user = FirebaseAuth.instance.currentUser;
 
-    // Check if the user is already logged in
-    await authProvider.checkLoginStatus();
-
-    // Navigate based on login status
-    if (authProvider.isLoggedIn) {
-      // If logged in, navigate to the MainScreen
+    if (user != null) {
+      // If user is logged in, navigate to MainScreen
       Navigator.pushReplacementNamed(context, RouteNames.mainScreen);
     } else {
-      // If not logged in, navigate to the FirstScreen (Introduction)
+      // If not logged in, navigate to FirstScreen (Introduction)
       Navigator.pushReplacementNamed(context, RouteNames.firstScreen);
     }
   }

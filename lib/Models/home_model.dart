@@ -1,11 +1,9 @@
-// lib/Models/home_model.dart
-
 import 'dart:ui';
 
 class WeatherData {
   final String location;
   final String weatherCondition;
-  final double? temperature;
+  final double temperature;
   final String weatherIcon;
 
   WeatherData({
@@ -20,10 +18,12 @@ class RiskArea {
   final String name;
   final String riskLevel;
   final Color riskColor;
+  final double hazardScore; // Added to store raw score
 
   RiskArea({
     required this.name,
     required this.riskLevel,
     required this.riskColor,
+    required this.hazardScore,
   });
 }
