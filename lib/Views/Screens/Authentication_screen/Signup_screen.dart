@@ -1,8 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 import 'package:evacuease/main_screen.dart';
@@ -183,7 +181,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 "I agree to the terms & conditions",
                 style: TextStyle(fontSize: 15, color: Colors.grey),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               TextField(
                 controller: _fullNameController,
                 decoration: InputDecoration(
@@ -311,7 +309,7 @@ class _SignupScreenState extends State<SignupScreen> {
               TextField(
                 controller: _numberController,
                 decoration: InputDecoration(
-                  hintText: 'Number',
+                  hintText: 'Mobile Number',
                   filled: true,
                   fillColor: Colors.grey[300],
                   contentPadding:
@@ -365,7 +363,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -381,7 +379,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   const Text("I agree to the terms and conditions"),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 5),
               isLoading
                   ? const SpinKitCircle(color: Colors.red)
                   : Container(

@@ -11,8 +11,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final HomeController _controller = HomeController();
-  bool _isLoading = true; // Loading state for UI
-  String? _errorMessage; // Error message to display
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -20,32 +20,25 @@ class _HomeScreenState extends State<HomeScreen> {
     _initializeApp();
   }
 
-  // Initialize the app by loading the model and fetching weather data
   Future<void> _initializeApp() async {
     try {
-      await _controller.loadModel(); // Load TensorFlow Lite model
-      await _controller.fetchCurrentLocationAndWeather(); // Fetch weather data
-
-      // Ensure riskAreas is updated before rebuilding
+      await _controller.loadModel();
+      await _controller.fetchCurrentLocationAndWeather();
       while (_controller.riskAreas.isEmpty) {
-        await Future.delayed(
-            Duration(milliseconds: 100)); // Small delay to allow async updates
+        await Future.delayed(const Duration(milliseconds: 100));
       }
-
-      setState(() {});
     } catch (e) {
-      setState(() {
-        _errorMessage = "Failed to load data: $e";
-      });
+      _errorMessage = "Failed to load data: $e";
     } finally {
       setState(() {
-        _isLoading = false; // Stop loading
+        _isLoading = false;
       });
     }
   }
 
+  @override
   void dispose() {
-    _controller.dispose(); // Cancel the timer to prevent memory leaks
+    _controller.dispose();
     super.dispose();
   }
 
@@ -59,37 +52,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Weather Info
-                Container(
-                  width: double.infinity,
-                  height: 120,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 3,
-                        spreadRadius: 3,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: FutureBuilder<WeatherData?>(
-                    future: _controller.getWeatherData(),
-                    builder: (context, snapshot) {
-                      return _buildWeatherInfo(snapshot);
-                    },
-                  ),
-                ),
+                _buildWeatherInfoSection(context),
                 const SizedBox(height: 15),
-                _buildStarterSection(),
+                _buildStarterSection(context),
                 const SizedBox(height: 15),
-                _buildRiskAreaSection(),
+                _buildRiskAreaSection(context),
                 const SizedBox(height: 15),
-                _buildOfflineRiskMapSection(),
+                _buildOfflineRiskMapSection(context),
               ],
             ),
           ),
@@ -98,127 +69,173 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Weather Info Widget with Skeleton
-  Widget _buildWeatherInfo(AsyncSnapshot<WeatherData?> snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 150,
-                  height: 22,
-                  color: Colors.grey[300], // Skeleton for location
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 14,
-                          color: Colors.grey[300], // Skeleton for condition
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          width: 100,
-                          height: 26,
-                          color: Colors.grey[300], // Skeleton for temperature
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 20),
-                    Container(
-                      width: 50,
-                      height: 50,
-                      color: Colors.grey[300], // Skeleton for icon
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+  // Weather Info Section
+  Widget _buildWeatherInfoSection(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        minHeight: 100, // Minimum height to avoid collapsing
+        maxHeight:
+            MediaQuery.of(context).size.height * 0.125, // Responsive max height
+      ),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 3,
+            spreadRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: FutureBuilder<WeatherData?>(
+        future:
+            Future.delayed(Duration.zero, () => _controller.getWeatherData()),
+        builder: (context, snapshot) {
+          return _buildWeatherInfo(context, snapshot);
+        },
+      ),
+    );
+  }
+
+  Widget _buildWeatherInfo(
+      BuildContext context, AsyncSnapshot<WeatherData?> snapshot) {
+    if (_isLoading || snapshot.connectionState == ConnectionState.waiting) {
+      return _buildWeatherSkeleton(context);
     }
 
-    // Only proceed if data is available after completion
-    if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+    if (snapshot.hasData) {
       WeatherData weatherData = snapshot.data!;
       return Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 10), // Reduced padding for smaller screens
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  weatherData.location,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+            Flexible(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    weatherData.location,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-                Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          weatherData.weatherCondition,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              weatherData.weatherCondition,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${weatherData.temperature?.toStringAsFixed(1) ?? "--"} °C',
+                              style: const TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        Text(
-                          '${weatherData.temperature.toStringAsFixed(1)} °C',
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 20),
-                    Image.asset(
-                      weatherData.weatherIcon,
-                      width: 50,
-                      height: 50,
-                    ),
-                  ],
-                ),
-              ],
+                      ),
+                      const SizedBox(width: 10),
+                      Image.asset(
+                        weatherData.weatherIcon,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.contain,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       );
     }
 
-    // Return an empty container if neither waiting nor done with data
-    // This handles initial states or unexpected conditions without showing an error
-    return Container();
+    return _buildWeatherSkeleton(context);
+  }
+
+  Widget _buildWeatherSkeleton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width:
+                    MediaQuery.of(context).size.width * 0.4, // Responsive width
+                height: 22,
+                color: Colors.grey[300],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.2,
+                        height: 14,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.25,
+                        height: 26,
+                        color: Colors.grey[300],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 50,
+                    height: 50,
+                    color: Colors.grey[300],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   // Starter Section
-  Widget _buildStarterSection() {
+  Widget _buildStarterSection(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 100,
+      constraints: BoxConstraints(
+        minHeight: 80,
+        maxHeight: MediaQuery.of(context).size.height * 0.15,
+      ),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
@@ -233,36 +250,40 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Starter",
-                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  "Things to prepare when has disaster?",
-                  style: TextStyle(color: Colors.grey),
-                )
-              ],
+            Flexible(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Starter",
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "Things to prepare when has disaster?",
+                    style: TextStyle(color: Colors.grey),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
             const Icon(
               Icons.arrow_right,
               size: 50,
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  // Risk Areas Section with Skeleton Loading
-  Widget _buildRiskAreaSection() {
+  // Risk Areas Section
+  Widget _buildRiskAreaSection(BuildContext context) {
     if (_isLoading) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,8 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 15),
-          // Skeleton for 3 items
-          ...List.generate(3, (index) => _buildSkeletonRiskAreaItem()),
+          ...List.generate(3, (index) => _buildSkeletonRiskAreaItem(context)),
           const SizedBox(height: 10),
         ],
       );
@@ -285,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return Center(
         child: Text(
           _errorMessage!,
-          style: TextStyle(color: Colors.red, fontSize: 16),
+          style: const TextStyle(color: Colors.red, fontSize: 16),
         ),
       );
     }
@@ -296,7 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Show only top 3 risk areas
     return Column(
       children: [
         const Align(
@@ -309,19 +328,18 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 15),
         ..._controller.riskAreas
             .take(3)
-            .map((area) => _buildRiskAreaItem(area))
+            .map((area) => _buildRiskAreaItem(context, area))
             .toList(),
         const SizedBox(height: 10),
       ],
     );
   }
 
-  // Skeleton Risk Area Item
-  Widget _buildSkeletonRiskAreaItem() {
+  Widget _buildSkeletonRiskAreaItem(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 70,
-      decoration: BoxDecoration(
+      height: MediaQuery.of(context).size.height * 0.1, // Responsive height
+      decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0)),
       ),
       child: Padding(
@@ -342,13 +360,13 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 120,
+                  width: MediaQuery.of(context).size.width * 0.3,
                   height: 20,
                   color: Colors.grey[300],
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  width: 80,
+                  width: MediaQuery.of(context).size.width * 0.2,
                   height: 15,
                   color: Colors.grey[300],
                 ),
@@ -360,18 +378,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Individual Risk Area Item
-  Widget _buildRiskAreaItem(RiskArea area) {
+  Widget _buildRiskAreaItem(BuildContext context, RiskArea area) {
     return Container(
       width: double.infinity,
-      height: 70,
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey,
-            width: 1.0,
-          ),
-        ),
+      height: MediaQuery.of(context).size.height * 0.1,
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -386,26 +398,30 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 15),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  area.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+            Flexible(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    area.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  area.riskLevel,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Colors.grey,
+                  Text(
+                    area.riskLevel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.grey,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -414,8 +430,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Offline Risk Map Section
-  Widget _buildOfflineRiskMapSection() {
+  Widget _buildOfflineRiskMapSection(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Align(
           alignment: Alignment.centerLeft,
@@ -425,24 +442,31 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 15),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildCategoryButton("Flood", "assets/icons/flood.png"),
-            _buildCategoryButton("Tsunami", "assets/icons/weather.png"),
-            _buildCategoryButton("Landslide", "assets/icons/tape.png"),
-            _buildCategoryButton("Earthquake", "assets/icons/earthquake.png"),
-          ],
+        Center(
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildCategoryButton(context, "Flood", "assets/icons/flood.png"),
+              _buildCategoryButton(
+                  context, "Tsunami", "assets/icons/weather.png"),
+              _buildCategoryButton(
+                  context, "Landslide", "assets/icons/tape.png"),
+              _buildCategoryButton(
+                  context, "Earthquake", "assets/icons/earthquake.png"),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  // Category Button for Offline Risk Map
-  Widget _buildCategoryButton(String label, String assetPath) {
+  Widget _buildCategoryButton(
+      BuildContext context, String label, String assetPath) {
     return Container(
-      width: 60,
-      height: 60,
+      width: MediaQuery.of(context).size.width * 0.18, // Responsive width
+      height: MediaQuery.of(context).size.width * 0.18,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.red),
         borderRadius: BorderRadius.circular(15),
@@ -451,8 +475,17 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset(assetPath, width: 30),
-          Text(label, style: TextStyle(color: Colors.red[500])),
+          Image.asset(
+            assetPath,
+            width: 30,
+            height: 30,
+            fit: BoxFit.contain,
+          ),
+          Text(
+            label,
+            style: TextStyle(color: Colors.red[500], fontSize: 12),
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );

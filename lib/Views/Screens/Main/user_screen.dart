@@ -1,10 +1,142 @@
 import 'package:evacuease/routes/route_names.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:evacuease/Controllers/auth_provider/auth_provider.dart'; // Import the AuthProvider
+import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../Models/feedback_model.dart' as Feedback;
 
 class UserScreen extends StatelessWidget {
   const UserScreen({super.key});
+
+  Future<void> _submitFeedback(BuildContext context, String type) async {
+    final authProvider = Provider.of<AuthProviders>(context, listen: false);
+    final TextEditingController messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(type == 'bug' ? 'Report a Bug' : 'Send Feedback'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: messageController,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: type == 'bug'
+                        ? 'Describe the bug you encountered...'
+                        : 'Share your feedback...',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (messageController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter some text')),
+                  );
+                  return;
+                }
+
+                final feedback = Feedback.Feedback(
+                  name: authProvider.user?.displayName ??
+                      authProvider.user?.email?.split('@')[0] ??
+                      'Anonymous',
+                  date: DateTime.now().toIso8601String(),
+                  userId: authProvider.user?.uid,
+                  message: messageController.text.trim(),
+                );
+
+                try {
+                  final response = await http.post(
+                    Uri.parse(
+                        'https://admin-evacu-ease.vercel.app/api/feedbacks'),
+                    headers: {'Content-Type': 'application/json'},
+                    body: json.encode(feedback.toJson()),
+                  );
+
+                  if (response.statusCode == 200 ||
+                      response.statusCode == 201) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Submission successful!')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text('Failed to submit: ${response.statusCode}')),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error submitting: $e')),
+                  );
+                }
+
+                Navigator.pop(context);
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('About EvacuEase'),
+          content: const SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'EvacuEase is a disaster preparedness and evacuation assistance app designed to help users stay safe during emergencies.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Version: 1.0.0',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Developed by: Your Name/Team',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  '© 2025 EvacuEase. All rights reserved.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,9 +165,9 @@ class UserScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               _buildListTile(
-                icon: Icons.person_outline,
-                title: "Account",
-                onTap: () {},
+                icon: Icons.info_outline,
+                title: "About",
+                onTap: () => _showAboutDialog(context),
               ),
               _buildListTile(
                 icon: Icons.language_outlined,
@@ -43,16 +175,17 @@ class UserScreen extends StatelessWidget {
                 onTap: () {},
               ),
               _buildListTile(
-                  icon: Icons.logout,
-                  title: "Logout",
-                  titleColor: Colors.red,
-                  onTap: () async {
-                    final authProvider =
-                        Provider.of<AuthProviders>(context, listen: false);
-                    await authProvider.logout();
-                    Navigator.pushReplacementNamed(
-                        context, RouteNames.firstScreen);
-                  }),
+                icon: Icons.logout,
+                title: "Logout",
+                titleColor: Colors.red,
+                onTap: () async {
+                  final authProvider =
+                      Provider.of<AuthProviders>(context, listen: false);
+                  await authProvider.logout();
+                  Navigator.pushReplacementNamed(
+                      context, RouteNames.firstScreen);
+                },
+              ),
               const SizedBox(height: 20),
               const Text(
                 "Feedback",
@@ -65,12 +198,12 @@ class UserScreen extends StatelessWidget {
               _buildListTile(
                 icon: Icons.bug_report_outlined,
                 title: "Report bug",
-                onTap: () {},
+                onTap: () => _submitFeedback(context, 'bug'),
               ),
               _buildListTile(
                 icon: Icons.feedback_outlined,
                 title: "Send feedback",
-                onTap: () {},
+                onTap: () => _submitFeedback(context, 'feedback'),
               ),
             ],
           ),

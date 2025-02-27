@@ -4,7 +4,8 @@ import 'package:evacuease/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:bcrypt/bcrypt.dart';
-import 'package:provider/provider.dart'; // For password hashing and comparison
+import 'package:provider/provider.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart'; // Add SpinKit import
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -17,26 +18,24 @@ class _SigninScreenState extends State<SigninScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool isLoading = false;
-  bool isPasswordVisible = false; // Variable to toggle password visibility
+  bool isPasswordVisible = false;
 
   Future<void> _signIn() async {
     final String email = _emailController.text.trim();
     final String password = _passwordController.text.trim();
 
-    // Validate email and password
     if (email.isEmpty || password.isEmpty) {
       _showDialog("Error", "Please fill in all fields.");
       return;
     }
 
-    // Validate email format
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       _showDialog("Error", "Please enter a valid email address.");
       return;
     }
 
     setState(() {
-      isLoading = true; // Show loading indicator
+      isLoading = true;
     });
 
     try {
@@ -49,26 +48,21 @@ class _SigninScreenState extends State<SigninScreen> {
 
         if (data['success'] == true) {
           final users = data['data'] as List;
-
-          // Find the user with the matching email
           final user = users.firstWhere(
             (user) => user['email'] == email,
             orElse: () => null,
           );
 
           if (user != null) {
-            // Compare the entered password with the hashed password
             final isPasswordValid = BCrypt.checkpw(password, user['password']);
 
             if (isPasswordValid) {
-              // Update login state
               final authProvider =
                   Provider.of<AuthProviders>(context, listen: false);
               await authProvider.login();
-
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => MainScreen()),
+                MaterialPageRoute(builder: (context) => const MainScreen()),
               );
             } else {
               _showDialog("Error", "Invalid email or password.");
@@ -86,7 +80,24 @@ class _SigninScreenState extends State<SigninScreen> {
       _showDialog("Error", "An error occurred: $e");
     } finally {
       setState(() {
-        isLoading = false; // Hide loading indicator
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final authProvider = Provider.of<AuthProviders>(context, listen: false);
+      await authProvider.signInWithGoogle(context);
+    } catch (e) {
+      _showDialog("Error", "Google Sign-In failed: $e");
+    } finally {
+      setState(() {
+        isLoading = false;
       });
     }
   }
@@ -101,7 +112,7 @@ class _SigninScreenState extends State<SigninScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("OK"),
+              child: const Text("OK"),
             ),
           ],
         );
@@ -112,7 +123,7 @@ class _SigninScreenState extends State<SigninScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Sign In")),
+      appBar: AppBar(title: const Text("Sign In")),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
@@ -162,23 +173,77 @@ class _SigninScreenState extends State<SigninScreen> {
             ),
             const SizedBox(height: 20),
             isLoading
-                ? Center(child: CircularProgressIndicator())
-                : SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _signIn,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+                ? const Center(
+                    child: SpinKitCircle(
+                      color: Colors.red, // Match your theme
+                      size: 50.0,
+                    ),
+                  )
+                : Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _signIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                          child: const Text(
+                            'Sign In',
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        'Sign In',
-                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      const SizedBox(height: 10),
+                      const Text("or"),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          onPressed: _signInWithGoogle,
+                          icon: Image.asset(
+                            'assets/icons/google.png',
+                            width: 24,
+                            height: 24,
+                          ),
+                          label: const Text(
+                            'Sign in with Google',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.grey),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Don't have an account? ",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          GestureDetector(
+                            onTap: _signInWithGoogle,
+                            child: const Text(
+                              "Sign up",
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
           ],
         ),
