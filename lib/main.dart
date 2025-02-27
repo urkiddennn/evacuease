@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:evacuease/Controllers/auth_provider/auth_provider.dart'; // Updated import
-import 'package:evacuease/routes/route_generator.dart'; // Import RouteGenerator
-import 'package:evacuease/routes/route_names.dart'; // Import RouteNames
+import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
+import 'package:evacuease/routes/route_generator.dart';
+import 'package:evacuease/routes/route_names.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:evacuease/Controllers/language.dart'; // Import the language file
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,9 +19,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) =>
-          AuthProviders(), // Use the updated AuthProviders class
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => AuthProviders()),
+        ChangeNotifierProvider(create: (context) => Language()),
+      ],
       child: SafeArea(
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -29,8 +32,8 @@ class MyApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
             useMaterial3: true,
           ),
-          initialRoute: RouteNames.loading, // Set initial route
-          onGenerateRoute: RouteGenerator.generateRoute, // Use RouteGenerator
+          initialRoute: RouteNames.loading,
+          onGenerateRoute: RouteGenerator.generateRoute,
         ),
       ),
     );

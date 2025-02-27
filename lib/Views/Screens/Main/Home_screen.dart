@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Add this import
 import 'package:evacuease/Controllers/home_controller.dart';
 import 'package:evacuease/Models/home_model.dart';
+import '../../../Controllers/language.dart'; // Updated import path
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final language = Provider.of<Language>(context); // Access Language provider
     print(
         "Risk Areas in UI: ${_controller.riskAreas.map((area) => area.name).toList()}");
     return SafeArea(
@@ -74,9 +77,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(
-        minHeight: 100, // Minimum height to avoid collapsing
-        maxHeight:
-            MediaQuery.of(context).size.height * 0.125, // Responsive max height
+        minHeight: 100,
+        maxHeight: MediaQuery.of(context).size.height * 0.125,
       ),
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -110,9 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (snapshot.hasData) {
       WeatherData weatherData = snapshot.data!;
       return Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 10), // Reduced padding for smaller screens
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildWeatherSkeleton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(10.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -189,8 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width:
-                    MediaQuery.of(context).size.width * 0.4, // Responsive width
+                width: MediaQuery.of(context).size.width * 0.4,
                 height: 22,
                 color: Colors.grey[300],
               ),
@@ -230,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Starter Section
   Widget _buildStarterSection(BuildContext context) {
+    final language = Provider.of<Language>(context);
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(
@@ -259,14 +259,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Starter",
-                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                  Text(
+                    language.starter,
+                    style: const TextStyle(
+                        fontSize: 30, fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    "Things to prepare when has disaster?",
-                    style: TextStyle(color: Colors.grey),
+                    language.starterMessage,
+                    style: const TextStyle(color: Colors.grey),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -284,15 +285,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Risk Areas Section
   Widget _buildRiskAreaSection(BuildContext context) {
+    final language = Provider.of<Language>(context);
     if (_isLoading) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              "Risk Area",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              language.riskArea,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 15),
@@ -310,19 +312,19 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     if (_controller.riskAreas.isEmpty) {
-      return const Text(
-        'No risk areas available.',
-        style: TextStyle(fontSize: 16, color: Colors.grey),
+      return Text(
+        language.noRiskAreas,
+        style: const TextStyle(fontSize: 16, color: Colors.grey),
       );
     }
 
     return Column(
       children: [
-        const Align(
+        Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            "Risk Area",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            language.riskArea,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: 15),
@@ -338,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSkeletonRiskAreaItem(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: MediaQuery.of(context).size.height * 0.1, // Responsive height
+      height: MediaQuery.of(context).size.height * 0.1,
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0)),
       ),
@@ -431,14 +433,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Offline Risk Map Section
   Widget _buildOfflineRiskMapSection(BuildContext context) {
+    final language = Provider.of<Language>(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Align(
+        Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            "Offline Risk Map",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            language.offlineRiskMap,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: 15),
@@ -448,13 +451,14 @@ class _HomeScreenState extends State<HomeScreen> {
             runSpacing: 10,
             alignment: WrapAlignment.center,
             children: [
-              _buildCategoryButton(context, "Flood", "assets/icons/flood.png"),
               _buildCategoryButton(
-                  context, "Tsunami", "assets/icons/weather.png"),
+                  context, language.flood, "assets/icons/flood.png"),
               _buildCategoryButton(
-                  context, "Landslide", "assets/icons/tape.png"),
+                  context, language.tsunami, "assets/icons/weather.png"),
               _buildCategoryButton(
-                  context, "Earthquake", "assets/icons/earthquake.png"),
+                  context, language.landslide, "assets/icons/tape.png"),
+              _buildCategoryButton(
+                  context, language.earthquake, "assets/icons/earthquake.png"),
             ],
           ),
         ),
@@ -465,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCategoryButton(
       BuildContext context, String label, String assetPath) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.18, // Responsive width
+      width: MediaQuery.of(context).size.width * 0.18,
       height: MediaQuery.of(context).size.width * 0.18,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.red),

@@ -5,19 +5,22 @@ import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../../Models/feedback_model.dart' as Feedback;
+import '../../../Controllers/language.dart';
 
 class UserScreen extends StatelessWidget {
   const UserScreen({super.key});
 
   Future<void> _submitFeedback(BuildContext context, String type) async {
     final authProvider = Provider.of<AuthProviders>(context, listen: false);
+    final language = Provider.of<Language>(context, listen: false);
     final TextEditingController messageController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(type == 'bug' ? 'Report a Bug' : 'Send Feedback'),
+          title:
+              Text(type == 'bug' ? language.reportBug : language.sendFeedback),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -38,7 +41,7 @@ class UserScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Cancel'), // Static for simplicity
             ),
             TextButton(
               onPressed: () async {
@@ -86,7 +89,7 @@ class UserScreen extends StatelessWidget {
 
                 Navigator.pop(context);
               },
-              child: const Text('Submit'),
+              child: const Text('Submit'), // Static for simplicity
             ),
           ],
         );
@@ -95,11 +98,12 @@ class UserScreen extends StatelessWidget {
   }
 
   void _showAboutDialog(BuildContext context) {
+    final language = Provider.of<Language>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('About EvacuEase'),
+          title: Text(language.about),
           content: const SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -138,13 +142,53 @@ class UserScreen extends StatelessWidget {
     );
   }
 
+  void _showLanguageDialog(BuildContext context) {
+    final languageProvider = Provider.of<Language>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(languageProvider.language),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('English'),
+                onTap: () {
+                  languageProvider.setLanguage('en');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Tagalog'),
+                onTap: () {
+                  languageProvider.setLanguage('tl');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Bisaya'),
+                onTap: () {
+                  languageProvider.setLanguage('ceb');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProviders>(context);
+    final language = Provider.of<Language>(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Settings"),
+        title: Text(language.settings),
         leading: IconButton(
           icon: const Icon(Icons.settings),
           onPressed: () {},
@@ -166,17 +210,17 @@ class UserScreen extends StatelessWidget {
               const SizedBox(height: 10),
               _buildListTile(
                 icon: Icons.info_outline,
-                title: "About",
+                title: language.about,
                 onTap: () => _showAboutDialog(context),
               ),
               _buildListTile(
                 icon: Icons.language_outlined,
-                title: "Language",
-                onTap: () {},
+                title: language.language,
+                onTap: () => _showLanguageDialog(context),
               ),
               _buildListTile(
                 icon: Icons.logout,
-                title: "Logout",
+                title: language.logout,
                 titleColor: Colors.red,
                 onTap: () async {
                   final authProvider =
@@ -197,12 +241,12 @@ class UserScreen extends StatelessWidget {
               const SizedBox(height: 10),
               _buildListTile(
                 icon: Icons.bug_report_outlined,
-                title: "Report bug",
+                title: language.reportBug,
                 onTap: () => _submitFeedback(context, 'bug'),
               ),
               _buildListTile(
                 icon: Icons.feedback_outlined,
-                title: "Send feedback",
+                title: language.sendFeedback,
                 onTap: () => _submitFeedback(context, 'feedback'),
               ),
             ],

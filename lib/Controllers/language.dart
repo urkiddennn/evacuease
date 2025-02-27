@@ -26,6 +26,13 @@ class Language with ChangeNotifier {
       'user': 'User',
       'risk_area': 'Risk Area',
       'offline_risk_map': 'Offline Risk Map',
+      'starter': 'Starter',
+      'starter_message': 'Things to prepare when has disaster?',
+      'flood': 'Flood',
+      'tsunami': 'Tsunami',
+      'landslide': 'Landslide',
+      'earthquake': 'Earthquake',
+      'no_risk_areas': 'No risk areas available.',
     },
     'tl': {
       // Tagalog
@@ -42,6 +49,13 @@ class Language with ChangeNotifier {
       'user': 'Gumagamit',
       'risk_area': 'Lugar ng Panganib',
       'offline_risk_map': 'Offline na Mapa ng Panganib',
+      'starter': 'Panisimula',
+      'starter_message': 'Mga bagay na ihanda kapag may sakuna?',
+      'flood': 'Baha',
+      'tsunami': 'Tsunami',
+      'landslide': 'Pagguho ng Lupa',
+      'earthquake': 'Lindol',
+      'no_risk_areas': 'Walang mga lugar ng panganib na magagamit.',
     },
     'ceb': {
       // Bisaya (Cebuano)
@@ -58,6 +72,13 @@ class Language with ChangeNotifier {
       'user': 'Tiggamit',
       'risk_area': 'Lugar nga Delikado',
       'offline_risk_map': 'Offline nga Mapa sa Delikado',
+      'starter': 'Sugdan',
+      'starter_message': 'Mga butang nga iandam kung naay katalagman?',
+      'flood': 'Baha',
+      'tsunami': 'Tsunami',
+      'landslide': 'Lunop',
+      'earthquake': 'Linog',
+      'no_risk_areas': 'Walay mga lugar nga delikado nga magamit.',
     },
   };
 
@@ -75,4 +96,12 @@ class Language with ChangeNotifier {
   String get riskArea => translations[_currentLanguage]!['risk_area']!;
   String get offlineRiskMap =>
       translations[_currentLanguage]!['offline_risk_map']!;
+  String get starter => translations[_currentLanguage]!['starter']!;
+  String get starterMessage =>
+      translations[_currentLanguage]!['starter_message']!;
+  String get flood => translations[_currentLanguage]!['flood']!;
+  String get tsunami => translations[_currentLanguage]!['tsunami']!;
+  String get landslide => translations[_currentLanguage]!['landslide']!;
+  String get earthquake => translations[_currentLanguage]!['earthquake']!;
+  String get noRiskAreas => translations[_currentLanguage]!['no_risk_areas']!;
 }
