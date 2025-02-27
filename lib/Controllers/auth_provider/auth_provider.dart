@@ -1,56 +1,92 @@
-import 'package:evacuease/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:evacuease/routes/route_names.dart';
 
 class AuthProviders with ChangeNotifier {
   bool _isLoggedIn = false;
   User? _user;
+  String? _apiUserId;
 
   bool get isLoggedIn => _isLoggedIn;
   User? get user => _user;
+  String? get apiUserId => _apiUserId;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   AuthProviders() {
-    _checkLoginStatus();
+    // No initial check here; LoadingScreen handles it
   }
 
-  Future<void> _checkLoginStatus() async {
-    final User? currentUser = _auth.currentUser;
-    if (currentUser != null) {
-      _isLoggedIn = true;
-      _user = currentUser;
+  Future<void> checkLoginStatus() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    _apiUserId = prefs.getString('apiUserId');
+
+    if (_isLoggedIn && _apiUserId != null) {
+      final userData = await fetchUserData(_apiUserId!);
+      if (userData == null) {
+        await logoutWithoutNavigation();
+      }
     } else {
-      _isLoggedIn = false;
-      _user = null;
+      final User? currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        _isLoggedIn = true;
+        _user = currentUser;
+        await _saveLoginState(currentUser.uid);
+      } else {
+        _isLoggedIn = false;
+        _user = null;
+      }
     }
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', _isLoggedIn);
-
     notifyListeners();
   }
 
-  Future<void> login() async {
+  Future<void> login({String? apiUserId}) async {
     _isLoggedIn = true;
+    if (apiUserId != null) {
+      _apiUserId = apiUserId;
+    }
     notifyListeners();
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
+    await _saveLoginState(apiUserId);
   }
 
-  Future<void> logout() async {
+  Future<void> _saveLoginState(String? userId) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
+    if (userId != null) {
+      await prefs.setString('apiUserId', userId);
+    }
+  }
+
+  Future<void> logout(BuildContext context) async {
     await _googleSignIn.signOut();
     await _auth.signOut();
     _isLoggedIn = false;
     _user = null;
+    _apiUserId = null;
     notifyListeners();
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
+    await prefs.remove('apiUserId');
+    Navigator.pushReplacementNamed(context, RouteNames.signin);
+  }
+
+  Future<void> logoutWithoutNavigation() async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+    _isLoggedIn = false;
+    _user = null;
+    _apiUserId = null;
+    notifyListeners();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
+    await prefs.remove('apiUserId');
   }
 
   Future<void> signInWithGoogle(BuildContext context) async {
@@ -79,12 +115,12 @@ class AuthProviders with ChangeNotifier {
         final userData = await _promptForUserData(context, _user!);
 
         if (userData == null || userData.isEmpty) {
-          print("User data not provided (dialog canceled or empty).");
+          print("User data not provided.");
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
                 content: Text('User profile completion was canceled.')),
           );
-          return; // Stop the sign-in process
+          return;
         }
 
         try {
@@ -95,48 +131,20 @@ class AuthProviders with ChangeNotifier {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to create user: $apiError')),
           );
-          return; // Stop the sign-in process
+          return;
         }
 
         print("Updating login state...");
-        await login();
+        await login(apiUserId: _user!.uid);
 
         print("Navigating to MainScreen...");
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => MainScreen(initialIndex: 3)),
-        );
+        Navigator.pushReplacementNamed(context, RouteNames.mainScreen);
       }
     } catch (e) {
       print("Error signing in with Google: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to sign in with Google: $e')),
       );
-    }
-  }
-
-  Future<bool> _checkUserExistsInAPI(String email) async {
-    try {
-      print("Checking user existence in API for email: $email");
-      final response = await http.get(
-        Uri.parse('https://admin-evacu-ease.vercel.app/api/users?email=$email'),
-      );
-      print(
-          "API response for user existence check: ${response.statusCode} - ${response.body}");
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        final List<dynamic> users = responseData['data'] ?? [];
-        return users
-            .isNotEmpty; // Return true if any user with this email exists
-      } else {
-        print(
-            "API error checking user existence: ${response.statusCode} - ${response.body}");
-        return false; // Assume user doesn’t exist on API failure
-      }
-    } catch (e) {
-      print("Error checking user existence in API: $e");
-      return false; // Assume user doesn’t exist on error
     }
   }
 
@@ -148,14 +156,13 @@ class AuthProviders with ChangeNotifier {
             firebaseUser.email?.split('@')[0] ??
             'User',
         'email': firebaseUser.email,
-        'password': '', // No password required
+        'password': '',
         'role': 'user',
         'status': 'active',
-        'location': userData['location'] ?? '', // Ensure location is provided
-        'number': userData['number'] ?? '', // Ensure number is provided
+        'location': userData['location'] ?? '',
+        'number': userData['number'] ?? '',
       };
 
-      // Validate required fields
       if (requestBody['location'] == '' || requestBody['number'] == '') {
         throw Exception('Location and number are required.');
       }
@@ -173,23 +180,12 @@ class AuthProviders with ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         print("User created successfully.");
-      } else if (response.statusCode == 500) {
-        throw Exception('Server error: ${response.body}');
       } else {
-        try {
-          final errorData = json.decode(response.body);
-          print("API error details: ${errorData['message']}");
-          throw Exception(
-              'Failed to create user in API: ${errorData['message'] ?? 'Unknown error'}');
-        } catch (e) {
-          print("Error decoding API response: $e");
-          throw Exception(
-              'Failed to create user in API. Invalid API response.');
-        }
+        throw Exception('Failed to create user in API: ${response.body}');
       }
     } catch (e) {
       print("Error creating new user in API: $e");
-      throw Exception('Failed to create user in API: $e');
+      throw e;
     }
   }
 

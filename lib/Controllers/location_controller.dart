@@ -35,7 +35,8 @@ class LocationController {
       print("Checking location service...");
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        throw Exception("Location services are disabled.");
+        await Geolocator.openLocationSettings();
+        throw Exception("Please enable location services and try again.");
       }
 
       print("Checking permissions...");
@@ -48,12 +49,15 @@ class LocationController {
       }
 
       if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
         throw Exception(
-            "Location permissions permanently denied. Enable in settings.");
+            "Location permissions permanently denied. Please enable in settings.");
       }
 
       print("Getting position...");
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       currentLocation = LatLng(position.latitude, position.longitude);
       print("Current location: $currentLocation");
 
@@ -76,12 +80,10 @@ class LocationController {
       );
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks.first;
-        // Include barangay (subLocality), city (locality), and country
         String barangay = place.subLocality ?? '';
         String city = place.locality ?? '';
         String country = place.country ?? '';
 
-        // Build the location string
         List<String> parts = [];
         if (barangay.isNotEmpty) parts.add("Barangay $barangay");
         if (city.isNotEmpty) parts.add(city);

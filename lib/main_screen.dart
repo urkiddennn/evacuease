@@ -3,44 +3,46 @@ import 'package:evacuease/Views/Screens/main/location_screen.dart';
 import 'package:evacuease/Views/Screens/main/notification_screen.dart';
 import 'package:evacuease/Views/Screens/main/user_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 
 class MainScreen extends StatefulWidget {
-  final int initialIndex; // Add parameter for initial page index
+  final int initialIndex;
 
-  const MainScreen({super.key, this.initialIndex = 0}); // Default to 0 (Home)
+  const MainScreen({super.key, this.initialIndex = 0});
 
   @override
   _MainScreenState createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  late int _currentPageIndex; // Use late to initialize in initState
+  late int _currentPageIndex;
 
   final List<Widget> _pages = [
-    HomeScreen(),
-    LocationScreen(),
-    NotificationScreen(),
-    UserScreen(),
+    const HomeScreen(),
+    const LocationScreen(),
+    const NotificationScreen(),
+    const UserScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
-    _currentPageIndex = widget.initialIndex; // Set initial index from parameter
+    _currentPageIndex = widget.initialIndex;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _currentPageIndex, // Display only the selected page
-        children: _pages, // Keep all pages in memory
+        index: _currentPageIndex,
+        children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentPageIndex, // Set the currently selected tab
+        currentIndex: _currentPageIndex,
         onTap: (index) {
           setState(() {
-            _currentPageIndex = index; // Update selected tab index
+            _currentPageIndex = index;
           });
         },
         items: const [
@@ -61,9 +63,9 @@ class _MainScreenState extends State<MainScreen> {
             label: "User",
           ),
         ],
-        selectedItemColor: Colors.red, // Color for selected tab
-        unselectedItemColor: Colors.grey, // Color for unselected tabs
-        showUnselectedLabels: true, // Show labels for unselected tabs
+        selectedItemColor: Colors.red,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
       ),
     );
   }

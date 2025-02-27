@@ -41,7 +41,7 @@ class UserScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'), // Static for simplicity
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () async {
@@ -57,7 +57,7 @@ class UserScreen extends StatelessWidget {
                       authProvider.user?.email?.split('@')[0] ??
                       'Anonymous',
                   date: DateTime.now().toIso8601String(),
-                  userId: authProvider.user?.uid,
+                  userId: authProvider.user?.uid ?? authProvider.apiUserId,
                   message: messageController.text.trim(),
                 );
 
@@ -89,7 +89,7 @@ class UserScreen extends StatelessWidget {
 
                 Navigator.pop(context);
               },
-              child: const Text('Submit'), // Static for simplicity
+              child: const Text('Submit'),
             ),
           ],
         );
@@ -223,11 +223,7 @@ class UserScreen extends StatelessWidget {
                 title: language.logout,
                 titleColor: Colors.red,
                 onTap: () async {
-                  final authProvider =
-                      Provider.of<AuthProviders>(context, listen: false);
-                  await authProvider.logout();
-                  Navigator.pushReplacementNamed(
-                      context, RouteNames.firstScreen);
+                  await authProvider.logout(context);
                 },
               ),
               const SizedBox(height: 20),

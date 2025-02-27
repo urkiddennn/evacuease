@@ -4,7 +4,7 @@ import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 import 'package:evacuease/routes/route_generator.dart';
 import 'package:evacuease/routes/route_names.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:evacuease/Controllers/language.dart'; // Import the language file
+import 'package:evacuease/Controllers/language.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -4,8 +4,8 @@ import 'package:evacuease/Views/Screens/main/location_screen.dart';
 import 'package:evacuease/Views/Screens/main/notification_screen.dart';
 import 'package:evacuease/Views/Screens/main/user_screen.dart';
 import 'package:evacuease/Views/Screens/loading_screen.dart';
-import 'package:evacuease/Views/Screens/Introduction/first_screen.dart'; // Add this import
-import 'package:evacuease/Views/Screens/authentication_screen/signin_screen.dart'; // Add this import
+import 'package:evacuease/Views/Screens/Introduction/first_screen.dart';
+import 'package:evacuease/Views/Screens/authentication_screen/signin_screen.dart';
 import 'package:evacuease/main_screen.dart';
 import 'route_names.dart';
 
@@ -19,7 +19,7 @@ class RouteGenerator {
       case RouteNames.signin:
         return MaterialPageRoute(builder: (_) => const SigninScreen());
       case RouteNames.mainScreen:
-        return MaterialPageRoute(builder: (_) => MainScreen());
+        return MaterialPageRoute(builder: (_) => const MainScreen());
       case RouteNames.homeScreen:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
       case RouteNames.locationScreen:

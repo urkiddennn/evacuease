@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
-import 'package:evacuease/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart'; // Add SpinKit import
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:evacuease/routes/route_names.dart';
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -59,11 +59,8 @@ class _SigninScreenState extends State<SigninScreen> {
             if (isPasswordValid) {
               final authProvider =
                   Provider.of<AuthProviders>(context, listen: false);
-              await authProvider.login();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const MainScreen()),
-              );
+              await authProvider.login(apiUserId: user['_id']);
+              Navigator.pushReplacementNamed(context, RouteNames.mainScreen);
             } else {
               _showDialog("Error", "Invalid email or password.");
             }
@@ -175,7 +172,7 @@ class _SigninScreenState extends State<SigninScreen> {
             isLoading
                 ? const Center(
                     child: SpinKitCircle(
-                      color: Colors.red, // Match your theme
+                      color: Colors.red,
                       size: 50.0,
                     ),
                   )
@@ -232,7 +229,9 @@ class _SigninScreenState extends State<SigninScreen> {
                             style: TextStyle(color: Colors.grey),
                           ),
                           GestureDetector(
-                            onTap: _signInWithGoogle,
+                            onTap: () {
+                              // Navigate to signup screen if available
+                            },
                             child: const Text(
                               "Sign up",
                               style: TextStyle(

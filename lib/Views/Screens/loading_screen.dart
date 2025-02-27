@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:evacuease/routes/route_names.dart';
 
 class LoadingScreen extends StatefulWidget {
@@ -17,18 +17,25 @@ class _LoadingScreenState extends State<LoadingScreen> {
   }
 
   Future<void> _checkLoginStatus() async {
-    // Simulate a delay for loading (optional, can remove if not needed)
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 3)); // Loading delay
 
-    // Check Firebase authentication state directly
-    final User? user = FirebaseAuth.instance.currentUser;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    final bool hasSeenIntro = prefs.getBool('hasSeenIntro') ?? false;
 
-    if (user != null) {
-      // If user is logged in, navigate to MainScreen
+    print(
+        "Checking login status: isLoggedIn=$isLoggedIn, hasSeenIntro=$hasSeenIntro");
+
+    if (isLoggedIn) {
+      print("User is logged in, navigating to MainScreen");
       Navigator.pushReplacementNamed(context, RouteNames.mainScreen);
-    } else {
-      // If not logged in, navigate to FirstScreen (Introduction)
+    } else if (!hasSeenIntro) {
+      print("First use, navigating to FirstScreen");
+      await prefs.setBool('hasSeenIntro', true);
       Navigator.pushReplacementNamed(context, RouteNames.firstScreen);
+    } else {
+      print("Not logged in and intro seen, navigating to SigninScreen");
+      Navigator.pushReplacementNamed(context, RouteNames.signin);
     }
   }
 
@@ -38,7 +45,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        color: Colors.red[700], // Red background
+        color: Colors.red[700],
         child: Stack(
           children: [
             Positioned(
