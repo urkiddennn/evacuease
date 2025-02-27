@@ -5,7 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
-import '../Models/location_model.dart'; // Ensure this import is correct
+import 'package:geocoding/geocoding.dart';
+import '../Models/location_model.dart';
 
 class LocationController {
   LatLng? currentLocation;
@@ -14,10 +15,11 @@ class LocationController {
   bool isLoading = false;
   Map<String, String>? nearestLocation;
   StreamSubscription? compassSubscription;
+  String? _currentPlaceName;
 
   List<LocationModel> locations = [];
 
-  get currentLocationName => null;
+  String? get currentLocationName => _currentPlaceName;
 
   void startCompass(void Function(double) onDirectionChanged) {
     compassSubscription = FlutterCompass.events?.listen((event) {
@@ -30,11 +32,13 @@ class LocationController {
   Future<void> getCurrentLocation(void Function(bool) onLoadingChanged) async {
     onLoadingChanged(true);
     try {
+      print("Checking location service...");
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         throw Exception("Location services are disabled.");
       }
 
+      print("Checking permissions...");
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -45,15 +49,55 @@ class LocationController {
 
       if (permission == LocationPermission.deniedForever) {
         throw Exception(
-            "Location permissions are permanently denied. Please enable them in settings.");
+            "Location permissions permanently denied. Enable in settings.");
       }
 
+      print("Getting position...");
       final position = await Geolocator.getCurrentPosition();
       currentLocation = LatLng(position.latitude, position.longitude);
+      print("Current location: $currentLocation");
+
+      await _updateCurrentPlaceName();
       onLoadingChanged(false);
     } catch (e) {
+      print("Error getting location: $e");
+      _currentPlaceName = "Error fetching location";
       onLoadingChanged(false);
       throw e;
+    }
+  }
+
+  Future<void> _updateCurrentPlaceName() async {
+    if (currentLocation == null) return;
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        currentLocation!.latitude,
+        currentLocation!.longitude,
+      );
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
+        // Include barangay (subLocality), city (locality), and country
+        String barangay = place.subLocality ?? '';
+        String city = place.locality ?? '';
+        String country = place.country ?? '';
+
+        // Build the location string
+        List<String> parts = [];
+        if (barangay.isNotEmpty) parts.add("Barangay $barangay");
+        if (city.isNotEmpty) parts.add(city);
+        if (country.isNotEmpty) parts.add(country);
+
+        _currentPlaceName = parts.join(', ').trim();
+        if (_currentPlaceName!.isEmpty) {
+          _currentPlaceName = "Unknown Location";
+        }
+        print("Current place name: $_currentPlaceName");
+      } else {
+        _currentPlaceName = "Unknown Location";
+      }
+    } catch (e) {
+      print("Error reverse geocoding: $e");
+      _currentPlaceName = "Unknown Location";
     }
   }
 
@@ -63,6 +107,7 @@ class LocationController {
       final response = await http.get(
         Uri.parse("https://admin-evacu-ease.vercel.app/api/locations"),
       );
+      print("Fetch locations response: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -70,6 +115,7 @@ class LocationController {
           locations = (data['data'] as List)
               .map((location) => LocationModel.fromJson(location))
               .toList();
+          print("Locations fetched: ${locations.length}");
         } else {
           throw Exception("Failed to fetch locations: ${data['message']}");
         }
@@ -113,28 +159,28 @@ class LocationController {
         'image_url': nearest.images.isNotEmpty ? nearest.images.first : '',
         'travel_time': 'Unknown',
       };
+      print("Nearest location: ${nearestLocation!['location_name']}");
     }
   }
 
   Future<void> fetchRoute(void Function(bool) onLoadingChanged) async {
     if (currentLocation == null || nearestLocation == null) {
-      throw Exception("Current location or nearest location not available.");
+      throw Exception("Current or nearest location not available.");
     }
 
     onLoadingChanged(true);
 
-    const apiKey =
-        "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed"; // Your ORS API key
+    const apiKey = "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed";
     final coords = nearestLocation!['location']!.split(',');
-    final endLat = coords[0]; // Latitude from nearestLocation
-    final endLon = coords[1]; // Longitude from nearestLocation
+    final endLat = coords[0];
+    final endLon = coords[1];
     final start = "${currentLocation!.longitude},${currentLocation!.latitude}";
-    final end = "$endLon,$endLat"; // ORS expects lon,lat order
+    final end = "$endLon,$endLat";
 
     try {
       final url =
           "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$start&end=$end";
-      print("Fetching route from: $url"); // Debug log
+      print("Fetching route from: $url");
       final response = await http.get(Uri.parse(url));
 
       print("Route response status: ${response.statusCode}");
@@ -147,6 +193,7 @@ class LocationController {
           routePoints = geometry
               .map<LatLng>((point) => LatLng(point[1], point[0]))
               .toList();
+          print("Route points fetched: ${routePoints.length}");
         } else {
           throw Exception("No route found in response.");
         }

@@ -8,7 +8,7 @@ class LocationScreen extends StatefulWidget {
   const LocationScreen({Key? key}) : super(key: key);
 
   @override
-  State createState() => _LocationScreenState();
+  State<LocationScreen> createState() => _LocationScreenState();
 }
 
 class _LocationScreenState extends State<LocationScreen> {
@@ -23,6 +23,10 @@ class _LocationScreenState extends State<LocationScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeLocationAndMap();
+  }
+
+  void _initializeLocationAndMap() async {
     _controller.startCompass((direction) {
       if (mounted) {
         setState(() {
@@ -30,24 +34,40 @@ class _LocationScreenState extends State<LocationScreen> {
         });
       }
     });
-    _controller.getCurrentLocation((isLoading) {
-      if (mounted) {
-        setState(() {
-          _controller.isLoading = isLoading;
-        });
-        if (_controller.currentLocation != null) {
-          _mapController.move(_controller.currentLocation!, 17.0);
-          _controller.fetchLocations((isLoading) {
-            if (mounted) {
-              setState(() {
-                _controller.isLoading = isLoading;
-              });
-              _controller.findNearestLocation();
-            }
+
+    try {
+      await _controller.getCurrentLocation((isLoading) {
+        if (mounted) {
+          setState(() {
+            _controller.isLoading = isLoading;
           });
         }
+      }).timeout(const Duration(seconds: 10), onTimeout: () {
+        print("Location fetch timed out");
+        setState(() => _controller.isLoading = false);
+      });
+
+      if (_controller.currentLocation != null) {
+        print("Moving map to: ${_controller.currentLocation}");
+        _mapController.move(_controller.currentLocation!, 17.0);
+
+        await _controller.fetchLocations((isLoading) {
+          if (mounted) {
+            setState(() {
+              _controller.isLoading = isLoading;
+            });
+          }
+        });
+        _controller.findNearestLocation();
+        setState(() {});
+      } else {
+        print("No current location, falling back to default");
+        _mapController.move(LatLng(37.7749, -122.4194), 10.0); // San Francisco
       }
-    });
+    } catch (e) {
+      print("Initialization error: $e");
+      setState(() => _controller.isLoading = false);
+    }
   }
 
   @override
@@ -72,9 +92,13 @@ class _LocationScreenState extends State<LocationScreen> {
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: LatLng(0, 0),
-                initialZoom: 10.0,
-                onMapReady: () => setState(() => _isMapLoaded = true),
+                initialCenter: _controller.currentLocation ??
+                    LatLng(37.7749, -122.4194), // Fallback to San Francisco
+                initialZoom: _controller.currentLocation != null ? 20.0 : 15.0,
+                onMapReady: () {
+                  print("Map is ready");
+                  setState(() => _isMapLoaded = true);
+                },
               ),
               children: [
                 TileLayer(
@@ -84,9 +108,9 @@ class _LocationScreenState extends State<LocationScreen> {
                     'accessToken': mapboxAccessToken,
                     'id': 'mapbox/satellite-streets-v12',
                   },
-                  tileSize: 512,
-                  zoomOffset: -1,
                   userAgentPackageName: 'com.example.evacuease',
+                  errorImage:
+                      const NetworkImage('https://via.placeholder.com/256'),
                 ),
                 MarkerLayer(
                   markers: [
@@ -96,8 +120,7 @@ class _LocationScreenState extends State<LocationScreen> {
                         width: 50,
                         height: 50,
                         child: Transform.rotate(
-                          angle: _controller.facingDirection *
-                              (3.14159265359 / 180),
+                          angle: _controller.facingDirection * (3.14159 / 180),
                           child: const Icon(Icons.navigation,
                               color: Colors.blue, size: 50),
                         ),
@@ -111,9 +134,8 @@ class _LocationScreenState extends State<LocationScreen> {
                           onTap: () {
                             showModalBottomSheet(
                               context: context,
-                              builder: (context) {
-                                return _buildLocationDetails(location);
-                              },
+                              builder: (context) =>
+                                  _buildLocationDetails(location),
                             );
                           },
                           child: Column(
@@ -145,21 +167,8 @@ class _LocationScreenState extends State<LocationScreen> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              GestureDetector(
-                                onTap: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    builder: (context) {
-                                      return _buildLocationDetails(location);
-                                    },
-                                  );
-                                },
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: Colors.green,
-                                  size: 40,
-                                ),
-                              ),
+                              const Icon(Icons.location_on,
+                                  color: Colors.green, size: 40),
                             ],
                           ),
                         ),
@@ -184,9 +193,7 @@ class _LocationScreenState extends State<LocationScreen> {
             if (_controller.isLoading)
               Container(
                 color: Colors.black38,
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
             Positioned(
               top: 10,
@@ -263,20 +270,15 @@ class _LocationScreenState extends State<LocationScreen> {
                 const SnackBar(content: Text("Route is too short to display.")),
               );
             }
+            setState(() {});
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(e.toString())),
             );
           }
         },
-        label: const Text(
-          "Find Route",
-          style: TextStyle(color: Colors.white),
-        ),
-        icon: const Icon(
-          Icons.directions,
-          color: Colors.white,
-        ),
+        label: const Text("Find Route", style: TextStyle(color: Colors.white)),
+        icon: const Icon(Icons.directions, color: Colors.white),
         backgroundColor: Colors.red[400],
       ),
     );
@@ -368,8 +370,7 @@ class _LocationScreenState extends State<LocationScreen> {
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 180,
                     color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image,
-                        size: 50, color: Colors.grey),
+                    child: const Icon(Icons.broken_image, size: 50),
                   ),
                 ),
               ),
@@ -381,8 +382,7 @@ class _LocationScreenState extends State<LocationScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    location
-                        .locationName, // Display locationName instead of coordinates
+                    location.locationName,
                     style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ),
@@ -414,9 +414,10 @@ class _LocationScreenState extends State<LocationScreen> {
             const Text(
               'Details',
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -428,9 +429,10 @@ class _LocationScreenState extends State<LocationScreen> {
               const Text(
                 'Contacts',
                 style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
               const SizedBox(height: 4),
               ...location.contacts.map((contact) => Padding(
@@ -471,6 +473,7 @@ class _LocationScreenState extends State<LocationScreen> {
                               content: Text("Route is too short to display.")),
                         );
                       }
+                      setState(() {});
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(e.toString())),
@@ -478,10 +481,8 @@ class _LocationScreenState extends State<LocationScreen> {
                     }
                   },
                   icon: const Icon(Icons.directions, color: Colors.white),
-                  label: const Text(
-                    "Directions",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  label: const Text("Directions",
+                      style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     shape: RoundedRectangleBorder(
