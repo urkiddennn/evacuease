@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-
-import '../Models/location_model.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import '../Models/location_model.dart'; // Ensure this import is correct
 
 class LocationController {
   LatLng? currentLocation;
@@ -18,7 +17,8 @@ class LocationController {
 
   List<LocationModel> locations = [];
 
-  /// Start listening to compass data
+  get currentLocationName => null;
+
   void startCompass(void Function(double) onDirectionChanged) {
     compassSubscription = FlutterCompass.events?.listen((event) {
       if (event.heading != null) {
@@ -27,10 +27,8 @@ class LocationController {
     });
   }
 
-  /// Get the user's current location
   Future<void> getCurrentLocation(void Function(bool) onLoadingChanged) async {
     onLoadingChanged(true);
-
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -59,18 +57,12 @@ class LocationController {
     }
   }
 
-  /// Fetch locations from the API
   Future<void> fetchLocations(void Function(bool) onLoadingChanged) async {
     onLoadingChanged(true);
-
     try {
       final response = await http.get(
-        Uri.parse(
-            "https://admin-evacu-ease.vercel.app/api/locations"), // Fix the typo
+        Uri.parse("https://admin-evacu-ease.vercel.app/api/locations"),
       );
-
-      // print("Response Code: ${response.statusCode}");
-      // print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -79,20 +71,19 @@ class LocationController {
               .map((location) => LocationModel.fromJson(location))
               .toList();
         } else {
-          throw Exception("Failed to fetch locations.");
+          throw Exception("Failed to fetch locations: ${data['message']}");
         }
       } else {
-        throw Exception("Failed to fetch locations.");
+        throw Exception("Failed to fetch locations: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e"); // Log the actual error
+      print("Error fetching locations: $e");
       rethrow;
     } finally {
       onLoadingChanged(false);
     }
   }
 
-  /// Find the nearest location from the list
   void findNearestLocation() {
     if (currentLocation == null) return;
 
@@ -120,49 +111,57 @@ class LocationController {
         'location_name': nearest.name,
         'details': nearest.description,
         'image_url': nearest.images.isNotEmpty ? nearest.images.first : '',
-        'travel_time': 'Unknown', // You can calculate this if you have the data
+        'travel_time': 'Unknown',
       };
     }
   }
 
-  /// Fetch route to the nearest location
   Future<void> fetchRoute(void Function(bool) onLoadingChanged) async {
     if (currentLocation == null || nearestLocation == null) {
-      throw Exception("Unable to find route.");
+      throw Exception("Current location or nearest location not available.");
     }
 
     onLoadingChanged(true);
 
     const apiKey =
-        "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed"; // Replace with your API key
+        "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed"; // Your ORS API key
     final coords = nearestLocation!['location']!.split(',');
-    final endLat = coords[0];
-    final endLon = coords[1];
+    final endLat = coords[0]; // Latitude from nearestLocation
+    final endLon = coords[1]; // Longitude from nearestLocation
+    final start = "${currentLocation!.longitude},${currentLocation!.latitude}";
+    final end = "$endLon,$endLat"; // ORS expects lon,lat order
 
     try {
-      final response = await http.get(
-        Uri.parse(
-            "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=${currentLocation!.longitude},${currentLocation!.latitude}&end=$endLon,$endLat"),
-      );
+      final url =
+          "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$start&end=$end";
+      print("Fetching route from: $url"); // Debug log
+      final response = await http.get(Uri.parse(url));
+
+      print("Route response status: ${response.statusCode}");
+      print("Route response body: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final geometry = data['features'][0]['geometry']['coordinates'];
-
-        routePoints = geometry
-            .map<LatLng>((point) => LatLng(point[1], point[0]))
-            .toList();
-        onLoadingChanged(false);
+        if (data['features'] != null && data['features'].isNotEmpty) {
+          final geometry = data['features'][0]['geometry']['coordinates'];
+          routePoints = geometry
+              .map<LatLng>((point) => LatLng(point[1], point[0]))
+              .toList();
+        } else {
+          throw Exception("No route found in response.");
+        }
       } else {
-        throw Exception("Failed to fetch route.");
+        throw Exception(
+            "Failed to fetch route: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
+      print("Error fetching route: $e");
+      throw Exception("Error fetching route: $e");
+    } finally {
       onLoadingChanged(false);
-      throw e;
     }
   }
 
-  @override
   void dispose() {
     compassSubscription?.cancel();
   }

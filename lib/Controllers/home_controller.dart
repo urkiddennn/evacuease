@@ -26,26 +26,140 @@ class HomeController {
       "name": "Anahao Bag-o",
       "latitude": 8.9632271,
       "longitude": 126.1606863,
-      "hazardLevels": [1, 2, 2, 1, 3]
+      "hazardLevels": [1, 1, 2, 1, 2]
     },
     {
       "name": "Anahao Daan",
       "latitude": 8.9632548,
       "longitude": 126.1719341,
-      "hazardLevels": [2, 1, 3, 2, 1]
+      "hazardLevels": [1, 1, 2, 1, 3]
     },
     {
       "name": "Badong",
       "latitude": 8.9476053,
       "longitude": 126.1011226,
-      "hazardLevels": [1, 1, 2, 1, 2]
+      "hazardLevels": [1, 1, 2, 3, 3]
     },
     {
       "name": "Bajao",
       "latitude": 8.9854513,
       "longitude": 126.1533773,
-      "hazardLevels": [1, 3, 3, 1, 1]
+      "hazardLevels": [1, 1, 2, 1, 3]
     },
+    {
+      "name": "Bangsud",
+      "latitude": 8.9596191,
+      "longitude": 126.1464998,
+      "hazardLevels": [1, 1, 2, 2, 1]
+    },
+    {
+      "name": "Cabangahan",
+      "latitude": 8.9604729,
+      "longitude": 126.0946154,
+      "hazardLevels": [1, 1, 2, 2, 2]
+    },
+    {
+      "name": "Cagdapao",
+      "latitude": 8.9954761,
+      "longitude": 126.1558127,
+      "hazardLevels": [1, 1, 2, 1, 2]
+    },
+    {
+      "name": "Camagong",
+      "latitude": 9.0017070,
+      "longitude": 126.1932886,
+      "hazardLevels": [1, 2, 2, 1, 3]
+    },
+    {
+      "name": "Caras-an",
+      "latitude": 8.8976866,
+      "longitude": 126.0926214,
+      "hazardLevels": [1, 1, 3, 2, 2]
+    },
+    {
+      "name": "Cayale",
+      "latitude": 8.9838246,
+      "longitude": 126.1189457,
+      "hazardLevels": [1, 1, 2, 2, 1]
+    },
+    {
+      "name": "Dayo-an",
+      "latitude": 9.0259144,
+      "longitude": 126.1853197,
+      "hazardLevels": [1, 1, 2, 1, 2]
+    },
+    {
+      "name": "Gamut",
+      "latitude": 9.0046211,
+      "longitude": 126.1670673,
+      "hazardLevels": [1, 1, 2, 2, 2]
+    },
+    {
+      "name": "Jubang",
+      "latitude": 8.9839995,
+      "longitude": 126.2262931,
+      "hazardLevels": [1, 3, 2, 1, 3]
+    },
+    {
+      "name": "Kinabigtasan",
+      "latitude": 8.9783538,
+      "longitude": 126.1774005,
+      "hazardLevels": [1, 1, 2, 1, 2]
+    },
+    {
+      "name": "Layog",
+      "latitude": 8.9177761,
+      "longitude": 126.0959676,
+      "hazardLevels": [1, 1, 2, 2, 1]
+    },
+    {
+      "name": "Lindoy",
+      "latitude": 8.9448407,
+      "longitude": 126.1342049,
+      "hazardLevels": [1, 1, 2, 3, 1]
+    },
+    {
+      "name": "Mercedes",
+      "latitude": 0.0,
+      "longitude": 0.0,
+      "hazardLevels": [1, 3, 2, 1, 3]
+    },
+    {
+      "name": "Purisima (Pob.)",
+      "latitude": 9.0178894,
+      "longitude": 126.2335553,
+      "hazardLevels": [3, 3, 2, 1, 3]
+    },
+    {
+      "name": "Sumo-sumo",
+      "latitude": 8.977167,
+      "longitude": 126.238405,
+      "hazardLevels": [1, 3, 2, 2, 1]
+    },
+    {
+      "name": "Umbay",
+      "latitude": 8.9867111,
+      "longitude": 126.2361208,
+      "hazardLevels": [3, 3, 2, 1, 3]
+    },
+    {
+      "name": "Unaban",
+      "latitude": 8.9949463,
+      "longitude": 126.1889326,
+      "hazardLevels": [1, 2, 2, 1, 3]
+    },
+    {
+      "name": "Unidos",
+      "latitude": 8.9853186,
+      "longitude": 126.2020099,
+      "hazardLevels": [1, 2, 2, 1, 2]
+    },
+    {
+      "name": "Victoria",
+      "latitude": 9.0348458,
+      "longitude": 126.2097035,
+      "hazardLevels": [1, 3, 2, 1, 3]
+    }
   ];
 
   HomeController() {

@@ -329,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 15),
         ..._controller.riskAreas
-            .take(3)
+            .take(5)
             .map((area) => _buildRiskAreaItem(context, area))
             .toList(),
         const SizedBox(height: 10),

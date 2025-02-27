@@ -15,6 +15,10 @@ class _LocationScreenState extends State<LocationScreen> {
   final LocationController _controller = LocationController();
   final MapController _mapController = MapController();
   bool _isMapLoaded = false;
+  String? _selectedHazardType;
+
+  static const String mapboxAccessToken =
+      "pk.eyJ1IjoidXJraWRkZW4iLCJhIjoiY20zdG9sdWdoMGJlODJscTJuZ2sxcWM0ayJ9.F3FIfrwfoq-Xl5aWMiXM9w";
 
   @override
   void initState() {
@@ -48,8 +52,15 @@ class _LocationScreenState extends State<LocationScreen> {
 
   @override
   void dispose() {
-    _controller.dispose(); // Ensure all resources are released
+    _controller.dispose();
     super.dispose();
+  }
+
+  List<LocationModel> _getFilteredLocations() {
+    if (_selectedHazardType == null) return _controller.locations;
+    return _controller.locations
+        .where((location) => location.hazardType == _selectedHazardType)
+        .toList();
   }
 
   @override
@@ -61,15 +72,21 @@ class _LocationScreenState extends State<LocationScreen> {
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: LatLng(0, 0), // Placeholder center
-                initialZoom: 10.0, // Default zoom
+                initialCenter: LatLng(0, 0),
+                initialZoom: 10.0,
                 onMapReady: () => setState(() => _isMapLoaded = true),
               ),
               children: [
                 TileLayer(
                   urlTemplate:
-                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: ['a', 'b', 'c'],
+                      'https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=$mapboxAccessToken',
+                  additionalOptions: {
+                    'accessToken': mapboxAccessToken,
+                    'id': 'mapbox/satellite-streets-v12',
+                  },
+                  tileSize: 512,
+                  zoomOffset: -1,
+                  userAgentPackageName: 'com.example.evacuease',
                 ),
                 MarkerLayer(
                   markers: [
@@ -85,7 +102,7 @@ class _LocationScreenState extends State<LocationScreen> {
                               color: Colors.blue, size: 50),
                         ),
                       ),
-                    ..._controller.locations.map((location) {
+                    ..._getFilteredLocations().map((location) {
                       return Marker(
                         point: LatLng(location.lat, location.lng),
                         width: 100,
@@ -150,11 +167,12 @@ class _LocationScreenState extends State<LocationScreen> {
                     }).toList(),
                   ],
                 ),
-                if (_controller.routePoints.isNotEmpty)
+                if (_controller.routePoints.isNotEmpty &&
+                    _controller.routePoints.length >= 2)
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        pattern: StrokePattern.dashed(segments: const [10]),
+                        pattern: StrokePattern.dashed(segments: const [10, 10]),
                         points: _controller.routePoints,
                         color: Colors.red,
                         strokeWidth: 5,
@@ -170,6 +188,63 @@ class _LocationScreenState extends State<LocationScreen> {
                   child: CircularProgressIndicator(),
                 ),
               ),
+            Positioned(
+              top: 10,
+              left: 10,
+              right: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.location_on, color: Colors.red[500], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _controller.currentLocationName ??
+                            'Fetching location...',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 15,
+              left: 10,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHazardButton("Flood", Colors.blue),
+                  const SizedBox(height: 8),
+                  _buildHazardButton("Earthquake", Colors.orange),
+                  const SizedBox(height: 8),
+                  _buildHazardButton("Typhoon", Colors.purple),
+                  const SizedBox(height: 8),
+                  _buildHazardButton("Tsunami", Colors.red),
+                  const SizedBox(height: 8),
+                  _buildHazardButton("All", Colors.grey, isClear: true),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -183,6 +258,11 @@ class _LocationScreenState extends State<LocationScreen> {
                 });
               }
             });
+            if (_controller.routePoints.length < 2) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Route is too short to display.")),
+              );
+            }
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(e.toString())),
@@ -202,98 +282,228 @@ class _LocationScreenState extends State<LocationScreen> {
     );
   }
 
-  Widget _buildLocationDetails(LocationModel location) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      location.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 21),
-                    ),
-                    Text(
-                      'Capacity: ${location.capacity}',
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            location.description,
-            style: const TextStyle(fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              InkWell(
-                onTap: () {},
-                child: Container(
-                  width: 80,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    border: Border.all(width: 1.0, color: Colors.grey),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: const Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Icon(Icons.route, size: 15),
-                        Text("Routes"),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () {
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  width: 80,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    border: Border.all(width: 1.0, color: Colors.grey),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: const Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Icon(Icons.close, size: 15),
-                        Text("Close"),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (location.images.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(5.0),
-              child: Image.network(
-                location.images.first,
-                width: 150,
-                height: 150,
-                fit: BoxFit.cover,
-              ),
+  Widget _buildHazardButton(String type, Color color, {bool isClear = false}) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedHazardType = isClear ? null : type;
+          _controller.routePoints.clear();
+        });
+      },
+      child: Container(
+        width: 120,
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: _selectedHazardType == type ||
+                  (isClear && _selectedHazardType == null)
+              ? color.withOpacity(0.8)
+              : color.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color),
+        ),
+        child: Center(
+          child: Text(
+            type,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
             ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationDetails(LocationModel location) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
         ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    location.name,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (location.images.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  location.images.first,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 180,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image,
+                        size: 50, color: Colors.grey),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Row(
+              children: [
+                const Icon(Icons.location_pin, color: Colors.red, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    location
+                        .locationName, // Display locationName instead of coordinates
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.people, color: Colors.blue, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Capacity: ${location.capacity}',
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.warning, color: Colors.orange, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Hazard Type: ${location.hazardType}',
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Details',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              location.description,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            if (location.contacts.isNotEmpty) ...[
+              const Text(
+                'Contacts',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
+              ),
+              const SizedBox(height: 4),
+              ...location.contacts.map((contact) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.phone, color: Colors.green, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            contact,
+                            style: const TextStyle(
+                                fontSize: 14, color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 16),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      await _controller.fetchRoute((isLoading) {
+                        if (mounted) {
+                          setState(() {
+                            _controller.isLoading = isLoading;
+                          });
+                        }
+                      });
+                      if (_controller.routePoints.length < 2) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Route is too short to display.")),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.directions, color: Colors.white),
+                  label: const Text(
+                    "Directions",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  label: const Text("Close"),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

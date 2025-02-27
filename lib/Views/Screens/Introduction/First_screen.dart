@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:evacuease/Views/Screens/authentication_screen/Signin_screen.dart';
 import 'package:evacuease/Views/Screens/authentication_screen/Signup_screen.dart';
-import 'package:evacuease/Views/Screens/loading_screen.dart';
 
 class FirstScreen extends StatefulWidget {
   const FirstScreen({super.key});
@@ -17,7 +16,8 @@ class _FirstScreenState extends State<FirstScreen> {
   final List<Map<String, String>> onboardingData = [
     {
       'imagePath': 'assets/images/bg-1.jpg',
-      'title': 'Discover an easier route in Tandag City during disaster',
+      'title':
+          'Discover an easier route in Municipality of Tago during disaster',
       'description':
           'Lorem epso, hello my beautiful wifey. This is a sample text for the app.',
     },
@@ -29,7 +29,8 @@ class _FirstScreenState extends State<FirstScreen> {
     },
     {
       'imagePath': 'assets/images/bg-2.jpg',
-      'title': 'Discover an easier route in Tandag City during disaster',
+      'title':
+          'Discover an easier route in Municipality of Tago during disaster',
       'description':
           'Stay updated with real-time alerts and evacuation guides to stay safe.',
     }
