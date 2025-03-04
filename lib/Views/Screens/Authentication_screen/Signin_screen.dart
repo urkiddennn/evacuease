@@ -53,19 +53,29 @@ class _SigninScreenState extends State<SigninScreen> {
             orElse: () => null,
           );
 
-          if (user != null) {
-            final isPasswordValid = BCrypt.checkpw(password, user['password']);
+          if (user == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Account not registered. Please sign up.'),
+              ),
+            );
+            _emailController.clear();
+            _passwordController.clear();
+            Navigator.pushReplacementNamed(context, RouteNames.signup);
+            return;
+          }
 
-            if (isPasswordValid) {
-              final authProvider =
-                  Provider.of<AuthProviders>(context, listen: false);
-              await authProvider.login(apiUserId: user['_id']);
+          final isPasswordValid = BCrypt.checkpw(password, user['password']);
+          if (isPasswordValid) {
+            final authProvider =
+                Provider.of<AuthProviders>(context, listen: false);
+            final success = await authProvider.login(
+                apiUserId: user['_id'], context: context);
+            if (success) {
               Navigator.pushReplacementNamed(context, RouteNames.mainScreen);
-            } else {
-              _showDialog("Error", "Invalid email or password.");
             }
           } else {
-            _showDialog("Error", "User not found.");
+            _showDialog("Error", "Invalid email or password.");
           }
         } else {
           _showDialog("Error", "Server error. Please try again.");
@@ -89,7 +99,7 @@ class _SigninScreenState extends State<SigninScreen> {
 
     try {
       final authProvider = Provider.of<AuthProviders>(context, listen: false);
-      await authProvider.signInWithGoogle(context);
+      await authProvider.signInWithGoogle(context, fromSignup: false);
     } catch (e) {
       _showDialog("Error", "Google Sign-In failed: $e");
     } finally {
@@ -230,7 +240,8 @@ class _SigninScreenState extends State<SigninScreen> {
                           ),
                           GestureDetector(
                             onTap: () {
-                              // Navigate to signup screen if available
+                              Navigator.pushReplacementNamed(
+                                  context, RouteNames.signup);
                             },
                             child: const Text(
                               "Sign up",

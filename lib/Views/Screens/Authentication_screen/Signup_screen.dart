@@ -1,12 +1,11 @@
 import 'dart:convert';
-
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
-import 'package:evacuease/main_screen.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:bcrypt/bcrypt.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:evacuease/routes/route_names.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,7 +15,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  String? selectedRole; // Variable to hold the selected role
+  String? selectedRole;
   final List<String> roles = ['Telaje', 'Bagong Lungsod', 'Dagokdok'];
   bool agreeToTerms = false;
   bool isLoading = false;
@@ -40,7 +39,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     if (selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a Baranggay')),
+        const SnackBar(content: Text('Please select a Barangay')),
       );
       return;
     }
@@ -101,13 +100,11 @@ class _SignupScreenState extends State<SignupScreen> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = json.decode(response.body);
         if (responseData['success'] == true) {
+          final userId = responseData['data']['_id'];
           final authProvider =
               Provider.of<AuthProviders>(context, listen: false);
-          await authProvider._checkLoginStatus(); // Sync with Firebase state
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
-          );
+          await authProvider.login(apiUserId: userId);
+          Navigator.pushReplacementNamed(context, RouteNames.mainScreen);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Sign up successful!')),
           );
@@ -135,27 +132,22 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // signup_screen.dart (partial update, keep the rest unchanged)
   Future<void> _signInWithGoogle() async {
+    setState(() {
+      isLoading = true;
+    });
+
     try {
       final authProvider = Provider.of<AuthProviders>(context, listen: false);
       await authProvider.signInWithGoogle(context);
-
-      if (authProvider.isLoggedIn) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  MainScreen(initialIndex: 3)), // Navigate to UserScreen
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google Sign-In successful!')),
-        );
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error signing in with Google: $e')),
       );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -344,7 +336,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   });
                 },
                 decoration: InputDecoration(
-                  hintText: 'Baranggay',
+                  hintText: 'Barangay',
                   filled: true,
                   fillColor: Colors.grey[300],
                   contentPadding:
@@ -363,7 +355,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 5),
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -379,7 +370,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   const Text("I agree to the terms and conditions"),
                 ],
               ),
-              const SizedBox(height: 5),
               isLoading
                   ? const SpinKitCircle(color: Colors.red)
                   : Container(
@@ -397,7 +387,9 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                     ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+              Center(child: Text("or")),
+              const SizedBox(height: 10),
               Center(
                 child: ElevatedButton(
                   onPressed: _signInWithGoogle,
@@ -405,23 +397,54 @@ class _SignupScreenState extends State<SignupScreen> {
                     foregroundColor: Colors.black,
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
+                        borderRadius: BorderRadius.circular(15),
+                        side: BorderSide(width: 0.5, color: Colors.grey)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(10.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/icons/google.png',
-                          height: 24,
-                        ),
-                        const SizedBox(width: 10),
-                        const Text('Sign in with Google'),
-                      ],
+                    child: Container(
+                      width: double.infinity,
+                      height: 30,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/icons/google.png',
+                            height: 24,
+                          ),
+                          const SizedBox(width: 10),
+                          const Text('Sign in with Google'),
+                        ],
+                      ),
                     ),
                   ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Already have an account? ",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushReplacementNamed(
+                            context, RouteNames.signin);
+                      },
+                      child: const Text(
+                        "Sign in",
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -430,8 +453,4 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-}
-
-extension on AuthProviders {
-  _checkLoginStatus() {}
 }

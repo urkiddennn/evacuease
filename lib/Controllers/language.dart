@@ -6,7 +6,12 @@ class Language with ChangeNotifier {
   String get currentLanguage => _currentLanguage;
 
   void setLanguage(String language) {
-    _currentLanguage = language;
+    // Validate language code, default to 'en' if invalid
+    if (!translations.containsKey(language)) {
+      _currentLanguage = 'en';
+    } else {
+      _currentLanguage = language;
+    }
     notifyListeners();
   }
 
@@ -33,9 +38,9 @@ class Language with ChangeNotifier {
       'landslide': 'Landslide',
       'earthquake': 'Earthquake',
       'no_risk_areas': 'No risk areas available.',
+      'see_all': 'See All',
     },
     'tl': {
-      // Tagalog
       'about': 'Tungkol Sa',
       'settings': 'Mga Setting',
       'language': 'Wika',
@@ -56,9 +61,9 @@ class Language with ChangeNotifier {
       'landslide': 'Pagguho ng Lupa',
       'earthquake': 'Lindol',
       'no_risk_areas': 'Walang mga lugar ng panganib na magagamit.',
+      'see_all': 'Tingnan Lahat',
     },
     'ceb': {
-      // Bisaya (Cebuano)
       'about': 'Mahitungod Sa',
       'settings': 'Mga Setting',
       'language': 'Pinulongan',
@@ -79,29 +84,42 @@ class Language with ChangeNotifier {
       'landslide': 'Lunop',
       'earthquake': 'Linog',
       'no_risk_areas': 'Walay mga lugar nga delikado nga magamit.',
+      'see_all': 'Tan-awa Tanan',
     },
   };
 
-  String get about => translations[_currentLanguage]!['about']!;
-  String get settings => translations[_currentLanguage]!['settings']!;
-  String get language => translations[_currentLanguage]!['language']!;
-  String get logout => translations[_currentLanguage]!['logout']!;
-  String get feedback => translations[_currentLanguage]!['feedback']!;
-  String get reportBug => translations[_currentLanguage]!['report_bug']!;
-  String get sendFeedback => translations[_currentLanguage]!['send_feedback']!;
-  String get home => translations[_currentLanguage]!['home']!;
-  String get location => translations[_currentLanguage]!['location']!;
-  String get notification => translations[_currentLanguage]!['notification']!;
-  String get user => translations[_currentLanguage]!['user']!;
-  String get riskArea => translations[_currentLanguage]!['risk_area']!;
+  // Helper method to safely get translations with fallback
+  String _getTranslation(String key, {String fallback = 'Unknown'}) {
+    final languageMap = translations[_currentLanguage];
+    if (languageMap == null) {
+      print("Warning: Language '$_currentLanguage' not found, using 'en'");
+      return translations['en']![key] ?? fallback;
+    }
+    return languageMap[key] ?? translations['en']![key] ?? fallback;
+  }
+
+  String get about => _getTranslation('about');
+  String get settings => _getTranslation('settings');
+  String get language => _getTranslation('language');
+  String get logout => _getTranslation('logout');
+  String get feedback => _getTranslation('feedback');
+  String get reportBug => _getTranslation('report_bug', fallback: 'Report Bug');
+  String get sendFeedback =>
+      _getTranslation('send_feedback', fallback: 'Send Feedback');
+  String get home => _getTranslation('home');
+  String get location => _getTranslation('location');
+  String get notification => _getTranslation('notification');
+  String get user => _getTranslation('user');
+  String get riskArea => _getTranslation('risk_area', fallback: 'Risk Area');
   String get offlineRiskMap =>
-      translations[_currentLanguage]!['offline_risk_map']!;
-  String get starter => translations[_currentLanguage]!['starter']!;
-  String get starterMessage =>
-      translations[_currentLanguage]!['starter_message']!;
-  String get flood => translations[_currentLanguage]!['flood']!;
-  String get tsunami => translations[_currentLanguage]!['tsunami']!;
-  String get landslide => translations[_currentLanguage]!['landslide']!;
-  String get earthquake => translations[_currentLanguage]!['earthquake']!;
-  String get noRiskAreas => translations[_currentLanguage]!['no_risk_areas']!;
+      _getTranslation('offline_risk_map', fallback: 'Offline Risk Map');
+  String get starter => _getTranslation('starter');
+  String get starterMessage => _getTranslation('starter_message');
+  String get flood => _getTranslation('flood');
+  String get tsunami => _getTranslation('tsunami');
+  String get landslide => _getTranslation('landslide');
+  String get earthquake => _getTranslation('earthquake');
+  String get noRiskAreas =>
+      _getTranslation('no_risk_areas', fallback: 'No risk areas available.');
+  String get seeAll => _getTranslation('see_all', fallback: 'See All');
 }

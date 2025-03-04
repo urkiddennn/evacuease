@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Add this import
+import 'package:provider/provider.dart';
 import 'package:evacuease/Controllers/home_controller.dart';
 import 'package:evacuease/Models/home_model.dart';
-import '../../../Controllers/language.dart'; // Updated import path
+import '../../../Controllers/language.dart';
+import '../../../routes/route_names.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,7 +13,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final HomeController _controller = HomeController();
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -23,10 +23,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initializeApp() async {
+    final controller = Provider.of<HomeController>(context, listen: false);
     try {
-      await _controller.loadModel();
-      await _controller.fetchCurrentLocationAndWeather();
-      while (_controller.riskAreas.isEmpty) {
+      await controller.loadModel();
+      await controller.fetchCurrentLocationAndWeather();
+      while (controller.riskAreas.isEmpty) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
     } catch (e) {
@@ -39,16 +40,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final language = Provider.of<Language>(context); // Access Language provider
+    final language = Provider.of<Language>(context);
+    final controller = Provider.of<HomeController>(context);
     print(
-        "Risk Areas in UI: ${_controller.riskAreas.map((area) => area.name).toList()}");
+        "Risk Areas in UI: ${controller.riskAreas.map((area) => area.name).toList()}");
     return SafeArea(
       child: Scaffold(
         body: SingleChildScrollView(
@@ -74,11 +70,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Weather Info Section
   Widget _buildWeatherInfoSection(BuildContext context) {
+    final controller = Provider.of<HomeController>(context);
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(
         minHeight: 100,
-        maxHeight: MediaQuery.of(context).size.height * 0.125,
+        maxHeight: MediaQuery.of(context).size.height * 0.150,
       ),
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -95,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: FutureBuilder<WeatherData?>(
         future:
-            Future.delayed(Duration.zero, () => _controller.getWeatherData()),
+            Future.delayed(Duration.zero, () => controller.getWeatherData()),
         builder: (context, snapshot) {
           return _buildWeatherInfo(context, snapshot);
         },
@@ -286,16 +283,25 @@ class _HomeScreenState extends State<HomeScreen> {
   // Risk Areas Section
   Widget _buildRiskAreaSection(BuildContext context) {
     final language = Provider.of<Language>(context);
+    final controller = Provider.of<HomeController>(context);
     if (_isLoading) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              language.riskArea,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                language.riskArea,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              ),
+              TextButton(
+                onPressed: null, // Disabled during loading
+                child: Text(language.seeAll,
+                    style: const TextStyle(color: Colors.grey)),
+              ),
+            ],
           ),
           const SizedBox(height: 15),
           ...List.generate(3, (index) => _buildSkeletonRiskAreaItem(context)),
@@ -311,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    if (_controller.riskAreas.isEmpty) {
+    if (controller.riskAreas.isEmpty) {
       return Text(
         language.noRiskAreas,
         style: const TextStyle(fontSize: 16, color: Colors.grey),
@@ -320,15 +326,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Column(
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            language.riskArea,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              language.riskArea,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            TextButton(
+              onPressed: () {
+                // Use named route if RiskAreaScreen is defined in RouteGenerator
+                Navigator.pushNamed(context, RouteNames.riskArea);
+                // Or direct navigation if not using named routes yet:
+                // Navigator.push(context, MaterialPageRoute(builder: (context) => const RiskAreaScreen()));
+              },
+              child: Text(language.seeAll,
+                  style: const TextStyle(color: Colors.blue)),
+            ),
+          ],
         ),
         const SizedBox(height: 15),
-        ..._controller.riskAreas
+        ...controller.riskAreas
             .take(5)
             .map((area) => _buildRiskAreaItem(context, area))
             .toList(),

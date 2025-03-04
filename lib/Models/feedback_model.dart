@@ -4,7 +4,7 @@ import 'dart:ui';
 class Feedback {
   final String name;
   final String date;
-  final String? userId; // Nullable since it might not always be present
+  final String? userId;
   final String message;
   final bool read;
 
@@ -13,21 +13,19 @@ class Feedback {
     required this.date,
     this.userId,
     required this.message,
-    this.read = false, // Default value as per schema
+    this.read = false,
   });
 
-  // Convert Feedback object to JSON for API submission
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      'date': date,
-      'userID': userId,
+      'date': date, // Keep ISO format for now, adjust if needed
+      'userID': userId, // Matches server response
       'message': message,
       'read': read,
     };
   }
 
-  // Create Feedback object from JSON (for potential API response)
   factory Feedback.fromJson(Map<String, dynamic> json) {
     return Feedback(
       name: json['name'] as String,

@@ -14,6 +14,7 @@ class LocationController {
   List<LatLng> routePoints = [];
   bool isLoading = false;
   Map<String, String>? nearestLocation;
+  LatLng? nearestLocationLatLng; // Store nearest location coordinates
   StreamSubscription? compassSubscription;
   String? _currentPlaceName;
 
@@ -161,6 +162,7 @@ class LocationController {
         'image_url': nearest.images.isNotEmpty ? nearest.images.first : '',
         'travel_time': 'Unknown',
       };
+      nearestLocationLatLng = LatLng(nearest.lat, nearest.lng);
       print("Nearest location: ${nearestLocation!['location_name']}");
     }
   }
@@ -205,6 +207,86 @@ class LocationController {
       }
     } catch (e) {
       print("Error fetching route: $e");
+      throw Exception("Error fetching route: $e");
+    } finally {
+      onLoadingChanged(false);
+    }
+  }
+
+  Future<void> fetchRouteWithCapacity(
+      int familySize, void Function(bool) onLoadingChanged) async {
+    if (currentLocation == null || locations.isEmpty) {
+      throw Exception("Current location or locations list not available.");
+    }
+
+    onLoadingChanged(true);
+
+    // Find nearest location with sufficient capacity
+    double calculateDistance(LatLng a, LatLng b) {
+      final Distance distance = Distance();
+      return distance.as(LengthUnit.Meter, a, b);
+    }
+
+    LocationModel? suitableLocation;
+    double? shortestDistance;
+
+    for (var location in locations) {
+      final distance = calculateDistance(
+          currentLocation!, LatLng(location.lat, location.lng));
+      // Assuming capacity is total available spots; adjust if API provides current occupancy
+      if (location.capacity >= familySize &&
+          (shortestDistance == null || distance < shortestDistance!)) {
+        shortestDistance = distance;
+        suitableLocation = location;
+      }
+    }
+
+    if (suitableLocation == null) {
+      onLoadingChanged(false);
+      throw Exception("No evacuation site with sufficient capacity found.");
+    }
+
+    nearestLocation = {
+      'location': '${suitableLocation.lat},${suitableLocation.lng}',
+      'location_name': suitableLocation.name,
+      'details': suitableLocation.description,
+      'image_url': suitableLocation.images.isNotEmpty
+          ? suitableLocation.images.first
+          : '',
+      'travel_time': 'Unknown',
+    };
+    nearestLocationLatLng = LatLng(suitableLocation.lat, suitableLocation.lng);
+
+    const apiKey = "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed";
+    final start = "${currentLocation!.longitude},${currentLocation!.latitude}";
+    final end = "${suitableLocation.lng},${suitableLocation.lat}";
+
+    try {
+      final url =
+          "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$start&end=$end";
+      print("Fetching route with capacity from: $url");
+      final response = await http.get(Uri.parse(url));
+
+      print("Route response status: ${response.statusCode}");
+      print("Route response body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['features'] != null && data['features'].isNotEmpty) {
+          final geometry = data['features'][0]['geometry']['coordinates'];
+          routePoints = geometry
+              .map<LatLng>((point) => LatLng(point[1], point[0]))
+              .toList();
+          print("Route points fetched: ${routePoints.length}");
+        } else {
+          throw Exception("No route found in response.");
+        }
+      } else {
+        throw Exception(
+            "Failed to fetch route: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      print("Error fetching route with capacity: $e");
       throw Exception("Error fetching route: $e");
     } finally {
       onLoadingChanged(false);

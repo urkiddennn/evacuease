@@ -3,8 +3,6 @@ import 'package:evacuease/Views/Screens/main/location_screen.dart';
 import 'package:evacuease/Views/Screens/main/notification_screen.dart';
 import 'package:evacuease/Views/Screens/main/user_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:evacuease/Controllers/auth_provider/auth_provider.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;

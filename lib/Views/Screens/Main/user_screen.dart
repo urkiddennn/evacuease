@@ -15,6 +15,13 @@ class UserScreen extends StatelessWidget {
     final language = Provider.of<Language>(context, listen: false);
     final TextEditingController messageController = TextEditingController();
 
+    // Use stored name and ID from AuthProviders
+    String name = authProvider.name ?? 'Anonymous';
+    String? userId = authProvider.apiUserId ?? authProvider.user?.uid;
+
+    print(
+        "API User ID: ${authProvider.apiUserId}, Firebase User: ${authProvider.user?.uid}, Name: $name");
+
     showDialog(
       context: context,
       builder: (context) {
@@ -53,21 +60,26 @@ class UserScreen extends StatelessWidget {
                 }
 
                 final feedback = Feedback.Feedback(
-                  name: authProvider.user?.displayName ??
-                      authProvider.user?.email?.split('@')[0] ??
-                      'Anonymous',
-                  date: DateTime.now().toIso8601String(),
-                  userId: authProvider.user?.uid ?? authProvider.apiUserId,
+                  name: name,
+                  date: DateTime.now().toString().split(' ')[0], // "YYYY-MM-DD"
+                  userId: userId,
                   message: messageController.text.trim(),
                 );
 
                 try {
+                  final payload = feedback.toJson();
+                  print(
+                      "Submitting feedback with payload: ${json.encode(payload)}");
+
                   final response = await http.post(
                     Uri.parse(
                         'https://admin-evacu-ease.vercel.app/api/feedbacks'),
                     headers: {'Content-Type': 'application/json'},
-                    body: json.encode(feedback.toJson()),
+                    body: json.encode(payload),
                   );
+
+                  print(
+                      "Feedback submission response: ${response.statusCode} - ${response.body}");
 
                   if (response.statusCode == 200 ||
                       response.statusCode == 201) {
@@ -77,11 +89,12 @@ class UserScreen extends StatelessWidget {
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content:
-                              Text('Failed to submit: ${response.statusCode}')),
+                          content: Text(
+                              'Failed to submit: ${response.statusCode} - ${response.body}')),
                     );
                   }
                 } catch (e) {
+                  print("Error submitting feedback: $e");
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error submitting: $e')),
                   );

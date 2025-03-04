@@ -135,6 +135,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
+  String truncateText(String text, {int maxLength = 50}) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength - 3)}...';
+  }
+
   IconData getIconForType(String type) {
     switch (type.toLowerCase()) {
       case 'warning':
@@ -210,14 +215,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     size: 20,
                                   ),
                                   const SizedBox(width: 10),
-                                  Text(
-                                    "${message.subject}",
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Text(
+                                      truncateText(message.subject),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(width: 10),
                                   Text(
                                     formatTime(message.createdAt),
                                     style: TextStyle(color: Colors.grey[600]),
@@ -226,7 +233,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               ),
                               const SizedBox(height: 20),
                               Text(
-                                message.message,
+                                truncateText(message.message),
                                 style: const TextStyle(fontSize: 16),
                               ),
                             ],
@@ -314,7 +321,7 @@ class MessageDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              message.message,
+              message.message, // Full message shown here
               style: const TextStyle(fontSize: 16),
             ),
           ],

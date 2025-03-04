@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,6 +18,7 @@ class _LocationScreenState extends State<LocationScreen> {
   final MapController _mapController = MapController();
   bool _isMapLoaded = false;
   String? _selectedHazardType;
+  late Timer _locationRefreshTimer;
 
   static const String mapboxAccessToken =
       "pk.eyJ1IjoidXJraWRkZW4iLCJhIjoiY20zdG9sdWdoMGJlODJscTJuZ2sxcWM0ayJ9.F3FIfrwfoq-Xl5aWMiXM9w";
@@ -24,6 +27,7 @@ class _LocationScreenState extends State<LocationScreen> {
   void initState() {
     super.initState();
     _initializeLocationAndMap();
+    _startLocationAutoRefresh();
   }
 
   void _initializeLocationAndMap() async {
@@ -70,8 +74,25 @@ class _LocationScreenState extends State<LocationScreen> {
     }
   }
 
+  void _startLocationAutoRefresh() {
+    _locationRefreshTimer =
+        Timer.periodic(const Duration(seconds: 30), (timer) async {
+      await _controller.fetchLocations((isLoading) {
+        if (mounted) {
+          setState(() {
+            _controller.isLoading = isLoading;
+          });
+        }
+      });
+      _controller.findNearestLocation();
+      setState(() {});
+      print("Locations refreshed: ${_controller.locations.length}");
+    });
+  }
+
   @override
   void dispose() {
+    _locationRefreshTimer.cancel(); // Prevent memory leaks
     _controller.dispose();
     super.dispose();
   }
@@ -81,6 +102,13 @@ class _LocationScreenState extends State<LocationScreen> {
     return _controller.locations
         .where((location) => location.hazardType == _selectedHazardType)
         .toList();
+  }
+
+  Future<int?> _showFamilySizeDialog() async {
+    return showDialog<int>(
+      context: context,
+      builder: (context) => const FamilySizeDialog(),
+    );
   }
 
   @override
@@ -257,24 +285,38 @@ class _LocationScreenState extends State<LocationScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          try {
-            await _controller.fetchRoute((isLoading) {
-              if (mounted) {
-                setState(() {
-                  _controller.isLoading = isLoading;
-                });
+          final int? familySize = await _showFamilySizeDialog();
+          if (familySize != null) {
+            try {
+              await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
+                if (mounted) {
+                  setState(() {
+                    _controller.isLoading = isLoading;
+                  });
+                }
+              });
+              if (_controller.routePoints.length < 2) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text("Route is too short to display.")),
+                );
+              } else if (_controller.nearestLocation == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text("No suitable evacuation site found.")),
+                );
+              } else {
+                setState(() {});
+                _mapController.move(
+                    LatLng(_controller.nearestLocationLatLng!.latitude,
+                        _controller.nearestLocationLatLng!.longitude),
+                    17.0);
               }
-            });
-            if (_controller.routePoints.length < 2) {
+            } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Route is too short to display.")),
+                SnackBar(content: Text(e.toString())),
               );
             }
-            setState(() {});
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(e.toString())),
-            );
           }
         },
         label: const Text("Find Route", style: TextStyle(color: Colors.white)),
@@ -402,6 +444,28 @@ class _LocationScreenState extends State<LocationScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
+                const Icon(Icons.person, color: Colors.green, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Contact Person: ${location.contactPersonName ?? "N/A"}',
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.visibility, color: Colors.purple, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Visibility: ${location.visibility}',
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
                 const Icon(Icons.warning, color: Colors.orange, size: 20),
                 const SizedBox(width: 8),
                 Text(
@@ -504,6 +568,138 @@ class _LocationScreenState extends State<LocationScreen> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class FamilySizeDialog extends StatefulWidget {
+  const FamilySizeDialog({super.key});
+
+  @override
+  _FamilySizeDialogState createState() => _FamilySizeDialogState();
+}
+
+class _FamilySizeDialogState extends State<FamilySizeDialog> {
+  int? selectedSize;
+  final TextEditingController personsController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text(
+        "Family Size",
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Select or enter the number of family members:",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildPredefinedOption(3),
+                _buildPredefinedOption(5),
+                _buildPredefinedOption(7),
+                _buildPredefinedOption(10),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: personsController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "Custom number",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  selectedSize = null; // Clear predefined selection
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: const Text(
+            "Cancel",
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            int? value;
+            if (personsController.text.isNotEmpty) {
+              value = int.tryParse(personsController.text.trim());
+            } else {
+              value = selectedSize;
+            }
+            if (value == null || value <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text("Please select or enter a valid number")),
+              );
+              return;
+            }
+            Navigator.pop(context, value);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[400],
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text(
+            "Confirm",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPredefinedOption(int value) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          selectedSize = value;
+          print("Selected predefined size: $value"); // Debug
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: selectedSize == value ? Colors.red[400] : Colors.red[200],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red[400]!),
+        ),
+        child: Center(
+          child: Text(
+            "$value",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ),
     );
