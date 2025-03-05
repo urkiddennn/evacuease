@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -143,13 +142,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
   IconData getIconForType(String type) {
     switch (type.toLowerCase()) {
       case 'warning':
-        return Icons.warning; // Yellow warning triangle
+        return Icons.warning;
       case 'alert':
-        return Icons.error; // Red alert/exclamation mark
+        return Icons.error;
       case 'immediately':
-        return Icons.priority_high; // High-priority icon
+        return Icons.priority_high;
       default:
-        return Icons.notification_important; // Default notification icon
+        return Icons.notification_important;
     }
   }
 
@@ -204,39 +203,54 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             horizontal: 20,
                             vertical: 10,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    getIconForType(message.type),
-                                    color: Colors.red[600],
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      truncateText(message.subject),
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minHeight: 90, // Minimum height for consistency
+                              maxHeight: 110, // Cap height for long messages
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  getIconForType(message.type),
+                                  color: Colors.red[600],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        truncateText(message.subject,
+                                            maxLength: 30),
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
                                       ),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        truncateText(message.message,
+                                            maxLength: 50),
+                                        style: const TextStyle(fontSize: 16),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    formatTime(message.createdAt),
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                truncateText(message.message),
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  formatTime(message.createdAt),
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -270,13 +284,13 @@ class MessageDetailScreen extends StatelessWidget {
   IconData getIconForType(String type) {
     switch (type.toLowerCase()) {
       case 'warning':
-        return Icons.warning; // Yellow warning triangle
+        return Icons.warning;
       case 'alert':
-        return Icons.error; // Red alert/exclamation mark
+        return Icons.error;
       case 'immediately':
-        return Icons.priority_high; // High-priority icon
+        return Icons.priority_high;
       default:
-        return Icons.notification_important; // Default notification icon
+        return Icons.notification_important;
     }
   }
 

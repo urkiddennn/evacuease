@@ -263,20 +263,22 @@ class _LocationScreenState extends State<LocationScreen> {
               ),
             ),
             Positioned(
-              bottom: 15,
+              top: 60,
               left: 10,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              right: 10,
+              child: Wrap(
+                spacing: 8, // Horizontal spacing
+                runSpacing: 8, // Vertical spacing if wrapped
+                alignment: WrapAlignment.start,
+                crossAxisAlignment: WrapCrossAlignment.end,
                 children: [
-                  _buildHazardButton("Flood", Colors.blue),
-                  const SizedBox(height: 8),
-                  _buildHazardButton("Earthquake", Colors.orange),
-                  const SizedBox(height: 8),
-                  _buildHazardButton("Typhoon", Colors.purple),
-                  const SizedBox(height: 8),
-                  _buildHazardButton("Tsunami", Colors.red),
-                  const SizedBox(height: 8),
-                  _buildHazardButton("All", Colors.grey, isClear: true),
+                  _buildHazardButton("Flood", Colors.blue, Icons.water),
+                  _buildHazardButton(
+                      "Earthquake", Colors.orange, Icons.vibration),
+                  _buildHazardButton("Typhoon", Colors.purple, Icons.storm),
+                  _buildHazardButton("Tsunami", Colors.red, Icons.waves),
+                  _buildHazardButton("All", Colors.grey, Icons.all_inclusive,
+                      isClear: true),
                 ],
               ),
             ),
@@ -326,7 +328,8 @@ class _LocationScreenState extends State<LocationScreen> {
     );
   }
 
-  Widget _buildHazardButton(String type, Color color, {bool isClear = false}) {
+  Widget _buildHazardButton(String type, Color color, IconData icon,
+      {bool isClear = false}) {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -335,27 +338,52 @@ class _LocationScreenState extends State<LocationScreen> {
         });
       },
       child: Container(
-        width: 120,
-        height: 36,
+        constraints: const BoxConstraints(
+            minWidth: 90), // Minimum width to fit "Earthquake"
+        height: 40, // Increased height to fit icon and text
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: _selectedHazardType == type ||
-                  (isClear && _selectedHazardType == null)
-              ? color.withOpacity(0.8)
-              : color.withOpacity(0.3),
+          color: Colors.white, // White background
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color),
-        ),
-        child: Center(
-          child: Text(
-            type,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-            overflow: TextOverflow.ellipsis,
+          border: Border.all(
+            color: _selectedHazardType == type ||
+                    (isClear && _selectedHazardType == null)
+                ? color
+                : Colors.grey,
+            width: 2,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: _selectedHazardType == type ||
+                      (isClear && _selectedHazardType == null)
+                  ? color
+                  : Colors.grey,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              type,
+              style: TextStyle(
+                color: _selectedHazardType == type ||
+                        (isClear && _selectedHazardType == null)
+                    ? color
+                    : Colors.grey,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );

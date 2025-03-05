@@ -335,10 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () {
-                // Use named route if RiskAreaScreen is defined in RouteGenerator
                 Navigator.pushNamed(context, RouteNames.riskArea);
-                // Or direct navigation if not using named routes yet:
-                // Navigator.push(context, MaterialPageRoute(builder: (context) => const RiskAreaScreen()));
               },
               child: Text(language.seeAll,
                   style: const TextStyle(color: Colors.blue)),
@@ -469,14 +466,17 @@ class _HomeScreenState extends State<HomeScreen> {
             runSpacing: 10,
             alignment: WrapAlignment.center,
             children: [
+              _buildCategoryButton(context, language.flood,
+                  "assets/icons/flood.png", "assets/images/flood.jpg"),
+              _buildCategoryButton(context, language.tsunami,
+                  "assets/icons/weather.png", "assets/images/tsunami.jpg"),
+              _buildCategoryButton(context, language.landslide,
+                  "assets/icons/tape.png", "assets/images/landslide.jpg"),
               _buildCategoryButton(
-                  context, language.flood, "assets/icons/flood.png"),
-              _buildCategoryButton(
-                  context, language.tsunami, "assets/icons/weather.png"),
-              _buildCategoryButton(
-                  context, language.landslide, "assets/icons/tape.png"),
-              _buildCategoryButton(
-                  context, language.earthquake, "assets/icons/earthquake.png"),
+                  context,
+                  language.earthquake,
+                  "assets/icons/earthquake.png",
+                  "assets/images/earthquake.jpg"),
             ],
           ),
         ),
@@ -484,32 +484,96 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryButton(
-      BuildContext context, String label, String assetPath) {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.18,
-      height: MediaQuery.of(context).size.width * 0.18,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.red),
-        borderRadius: BorderRadius.circular(15),
+  Widget _buildCategoryButton(BuildContext context, String label,
+      String assetPath, String mapImagePath) {
+    return GestureDetector(
+      onTap: () {
+        _showFullMap(context, mapImagePath, label);
+      },
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.18,
+        height: MediaQuery.of(context).size.width * 0.18,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.red),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Image.asset(
+              assetPath,
+              width: 30,
+              height: 30,
+              fit: BoxFit.contain,
+            ),
+            Text(
+              label,
+              style: TextStyle(color: Colors.red[500], fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Image.asset(
-            assetPath,
-            width: 30,
-            height: 30,
-            fit: BoxFit.contain,
+    );
+  }
+
+  void _showFullMap(BuildContext context, String mapImagePath, String title) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(10),
+          child: Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.black54,
+                child: InteractiveViewer(
+                  boundaryMargin: const EdgeInsets.all(0), // Stop at edges
+                  minScale: 0.5, // Minimum zoom level (slightly compressed)
+                  maxScale: 4.0, // Maximum zoom level
+                  child: Center(
+                    child: Image.asset(
+                      mapImagePath,
+                      fit: BoxFit.contain,
+                      scale: 1.2, // Slight compression for initial view
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text(
+                          "Error loading map image",
+                          style: TextStyle(color: Colors.white),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                left: 10,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
           ),
-          Text(
-            label,
-            style: TextStyle(color: Colors.red[500], fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

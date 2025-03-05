@@ -311,14 +311,14 @@ class HomeController {
   }
 
   String _getRiskLevel(double hazardScore) {
-    if (hazardScore >= 13) return "High";
-    if (hazardScore >= 10) return "Medium";
+    if (hazardScore >= 13.5) return "High";
+    if (hazardScore >= 11.5) return "Medium";
     return "Low";
   }
 
   Color _getRiskColor(double hazardScore) {
-    if (hazardScore >= 13) return Colors.red;
-    if (hazardScore >= 10) return Colors.orange;
+    if (hazardScore >= 13.5) return Colors.red;
+    if (hazardScore >= 11.5) return Colors.orange;
     return Colors.green;
   }
 

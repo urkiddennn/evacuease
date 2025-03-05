@@ -30,7 +30,7 @@ class Language with ChangeNotifier {
       'notification': 'Notification',
       'user': 'User',
       'risk_area': 'Risk Area',
-      'offline_risk_map': 'Offline Risk Map',
+      'offline_risk_map': 'Offline Image Risk Map',
       'starter': 'Starter',
       'starter_message': 'Things to prepare when has disaster?',
       'flood': 'Flood',
@@ -53,7 +53,7 @@ class Language with ChangeNotifier {
       'notification': 'Notipikasyon',
       'user': 'Gumagamit',
       'risk_area': 'Lugar ng Panganib',
-      'offline_risk_map': 'Offline na Mapa ng Panganib',
+      'offline_risk_map': 'Offline Imahi na Mapa ng Panganib',
       'starter': 'Panisimula',
       'starter_message': 'Mga bagay na ihanda kapag may sakuna?',
       'flood': 'Baha',
@@ -76,7 +76,7 @@ class Language with ChangeNotifier {
       'notification': 'Notipikasyon',
       'user': 'Tiggamit',
       'risk_area': 'Lugar nga Delikado',
-      'offline_risk_map': 'Offline nga Mapa sa Delikado',
+      'offline_risk_map': 'Offline pektyor nga Mapa sa Delikado',
       'starter': 'Sugdan',
       'starter_message': 'Mga butang nga iandam kung naay katalagman?',
       'flood': 'Baha',
@@ -112,7 +112,7 @@ class Language with ChangeNotifier {
   String get user => _getTranslation('user');
   String get riskArea => _getTranslation('risk_area', fallback: 'Risk Area');
   String get offlineRiskMap =>
-      _getTranslation('offline_risk_map', fallback: 'Offline Risk Map');
+      _getTranslation('offline_risk_map', fallback: 'Offline Image Risk Map');
   String get starter => _getTranslation('starter');
   String get starterMessage => _getTranslation('starter_message');
   String get flood => _getTranslation('flood');
