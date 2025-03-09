@@ -87,7 +87,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             if (newMessages.isNotEmpty) {
               Messages latestMessage = newMessages.first;
               showNotification(
-                'New Message: ${latestMessage.subject}',
+                'New Message: ${latestMessage.name}',
                 latestMessage.message,
               );
             }
@@ -154,7 +154,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return SafeArea(
+
       child: Scaffold(
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -224,7 +226,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        truncateText(message.subject,
+                                        truncateText(message.name,
                                             maxLength: 30),
                                         style: const TextStyle(
                                           fontSize: 20,
@@ -233,11 +235,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 4),
                                       Text(
                                         truncateText(message.message,
                                             maxLength: 50),
-                                        style: const TextStyle(fontSize: 16),
+                                        style: TextStyle(fontSize: 16, color: Colors.grey[500]),
                                         overflow: TextOverflow.ellipsis,
                                         maxLines: 2,
                                       ),
@@ -299,46 +301,48 @@ class MessageDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          message.subject,
+          message.name,
           style: const TextStyle(color: Colors.black87),
         ),
         backgroundColor: Colors.white,
         elevation: 1,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  getIconForType(message.type),
-                  color: Colors.red[600],
-                  size: 24,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  "${message.type}",
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    getIconForType(message.type),
+                    color: Colors.red[600],
+                    size: 28,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              formatTime(message.createdAt),
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              message.message, // Full message shown here
-              style: const TextStyle(fontSize: 16),
-            ),
-          ],
+                  const SizedBox(width: 10),
+                  Text(
+                    "${message.type}",
+                    style: const TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                formatTime(message.createdAt),
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                message.message, // Full message shown here
+                style: const TextStyle(fontSize: 20),
+              ),
+            ],
+          ),
         ),
       ),
     );

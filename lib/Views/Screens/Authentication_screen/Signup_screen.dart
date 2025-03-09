@@ -16,7 +16,35 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   String? selectedRole;
-  final List<String> roles = ['Telaje', 'Bagong Lungsod', 'Dagokdok'];
+  final List<String> roles = [
+  'Telaje',
+  'Bagong Lungsod',
+  'Dagokdok',
+  'Alba',
+  'Anahao Bag-o',
+  'Anahao Daan',
+  'Badong',
+  'Bajaio',
+  'Bangsud',
+  'Cabangahan',
+  'Cagdapao',
+  'Camagong',
+  'Caras-an',
+  'Cayale',
+  'Dayo-an',
+  'Gamut',
+  'Jubang',
+  'Kinabigtasan',
+  'Layog',
+  'Lindoy',
+  'Mercededes',
+  'Purisima (Pob.)',
+  'Sumo-sumo',
+  'Umbay',
+  'Unaban',
+  'Unidos',
+  'Victoria'
+];
   bool agreeToTerms = false;
   bool isLoading = false;
   bool isPasswordVisible = false;
