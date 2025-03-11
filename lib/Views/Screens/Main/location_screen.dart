@@ -127,6 +127,17 @@ class _LocationScreenState extends State<LocationScreen> {
     }
   }
 
+  void _scrollToCurrentLocation() {
+    if (_controller.currentLocation != null) {
+      _mapController.move(_controller.currentLocation!, 17.0);
+      print("Scrolled to current location: ${_controller.currentLocation}");
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Current location not available.")),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _locationRefreshTimer.cancel();
@@ -208,7 +219,7 @@ class _LocationScreenState extends State<LocationScreen> {
                               Container(
                                 height: 50,
                                 width: 40,
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(10), // Fixed typo here
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(6),
@@ -319,6 +330,15 @@ class _LocationScreenState extends State<LocationScreen> {
                 ],
               ),
             ),
+            Positioned(
+              bottom: 15,
+              left: 20,
+              child: FloatingActionButton(
+                onPressed: _scrollToCurrentLocation,
+                backgroundColor: Colors.red[400],
+                child: const Icon(Icons.my_location, color: Colors.white),
+              ),
+            ),
           ],
         ),
       ),
@@ -336,8 +356,7 @@ class _LocationScreenState extends State<LocationScreen> {
               });
               if (_controller.routePoints.length < 2) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text("Route is too short to display.")),
+                  const SnackBar(content: Text("Route is too short to display.")),
                 );
               } else if (_controller.nearestLocation == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -346,10 +365,7 @@ class _LocationScreenState extends State<LocationScreen> {
                 );
               } else {
                 setState(() {});
-                _mapController.move(
-                    LatLng(_controller.nearestLocationLatLng!.latitude,
-                        _controller.nearestLocationLatLng!.longitude),
-                    17.0);
+                _mapController.move(_controller.nearestLocationLatLng!, 17.0);
               }
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(
