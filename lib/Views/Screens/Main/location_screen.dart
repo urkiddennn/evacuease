@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -7,7 +6,9 @@ import 'package:evacuease/Controllers/location_controller.dart';
 import 'package:evacuease/Models/location_model.dart';
 
 class LocationScreen extends StatefulWidget {
-  const LocationScreen({Key? key}) : super(key: key);
+  final bool triggerEmergencyRoute;
+  const LocationScreen({Key? key, this.triggerEmergencyRoute = false})
+      : super(key: key);
 
   @override
   State<LocationScreen> createState() => _LocationScreenState();
@@ -28,6 +29,11 @@ class _LocationScreenState extends State<LocationScreen> {
     super.initState();
     _initializeLocationAndMap();
     _startLocationAutoRefresh();
+    if (widget.triggerEmergencyRoute) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleEmergencyRoute();
+      });
+    }
   }
 
   void _initializeLocationAndMap() async {
@@ -90,9 +96,40 @@ class _LocationScreenState extends State<LocationScreen> {
     });
   }
 
+  Future<void> _handleEmergencyRoute() async {
+    final int? familySize = await _showFamilySizeDialog();
+    if (familySize != null) {
+      try {
+        await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
+          if (mounted) {
+            setState(() {
+              _controller.isLoading = isLoading;
+            });
+          }
+        });
+        if (_controller.routePoints.length < 2) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Route is too short to display.")),
+          );
+        } else if (_controller.nearestLocation == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("No suitable evacuation site found.")),
+          );
+        } else {
+          setState(() {});
+          _mapController.move(_controller.nearestLocationLatLng!, 17.0);
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error finding route: $e")),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
-    _locationRefreshTimer.cancel(); // Prevent memory leaks
+    _locationRefreshTimer.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -121,7 +158,7 @@ class _LocationScreenState extends State<LocationScreen> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: _controller.currentLocation ??
-                    LatLng(37.7749, -122.4194), // Fallback to San Francisco
+                    LatLng(37.7749, -122.4194),
                 initialZoom: _controller.currentLocation != null ? 20.0 : 15.0,
                 onMapReady: () {
                   print("Map is ready");
@@ -267,8 +304,8 @@ class _LocationScreenState extends State<LocationScreen> {
               left: 10,
               right: 10,
               child: Wrap(
-                spacing: 8, // Horizontal spacing
-                runSpacing: 8, // Vertical spacing if wrapped
+                spacing: 8,
+                runSpacing: 8,
                 alignment: WrapAlignment.start,
                 crossAxisAlignment: WrapCrossAlignment.end,
                 children: [
@@ -338,12 +375,11 @@ class _LocationScreenState extends State<LocationScreen> {
         });
       },
       child: Container(
-        constraints: const BoxConstraints(
-            minWidth: 90), // Minimum width to fit "Earthquake"
-        height: 40, // Increased height to fit icon and text
+        constraints: const BoxConstraints(minWidth: 90),
+        height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white, // White background
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _selectedHazardType == type ||
@@ -656,7 +692,7 @@ class _FamilySizeDialogState extends State<FamilySizeDialog> {
               ),
               onChanged: (value) {
                 setState(() {
-                  selectedSize = null; // Clear predefined selection
+                  selectedSize = null;
                 });
               },
             ),
@@ -707,7 +743,7 @@ class _FamilySizeDialogState extends State<FamilySizeDialog> {
       onTap: () {
         setState(() {
           selectedSize = value;
-          print("Selected predefined size: $value"); // Debug
+          print("Selected predefined size: $value");
         });
       },
       borderRadius: BorderRadius.circular(8),

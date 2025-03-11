@@ -14,7 +14,7 @@ class LocationController {
   List<LatLng> routePoints = [];
   bool isLoading = false;
   Map<String, String>? nearestLocation;
-  LatLng? nearestLocationLatLng; // Store nearest location coordinates
+  LatLng? nearestLocationLatLng;
   StreamSubscription? compassSubscription;
   String? _currentPlaceName;
 
@@ -221,7 +221,6 @@ class LocationController {
 
     onLoadingChanged(true);
 
-    // Find nearest location with sufficient capacity
     double calculateDistance(LatLng a, LatLng b) {
       final Distance distance = Distance();
       return distance.as(LengthUnit.Meter, a, b);
@@ -233,7 +232,6 @@ class LocationController {
     for (var location in locations) {
       final distance = calculateDistance(
           currentLocation!, LatLng(location.lat, location.lng));
-      // Assuming capacity is total available spots; adjust if API provides current occupancy
       if (location.capacity >= familySize &&
           (shortestDistance == null || distance < shortestDistance!)) {
         shortestDistance = distance;
