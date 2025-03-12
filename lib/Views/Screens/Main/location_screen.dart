@@ -14,12 +14,13 @@ class LocationScreen extends StatefulWidget {
   State<LocationScreen> createState() => _LocationScreenState();
 }
 
-class _LocationScreenState extends State<LocationScreen> {
+class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObserver {
   final LocationController _controller = LocationController();
   final MapController _mapController = MapController();
   bool _isMapLoaded = false;
   String? _selectedHazardType;
   late Timer _locationRefreshTimer;
+  bool _isNavigating = false;
 
   static const String mapboxAccessToken =
       "pk.eyJ1IjoidXJraWRkZW4iLCJhIjoiY20zdG9sdWdoMGJlODJscTJuZ2sxcWM0ayJ9.F3FIfrwfoq-Xl5aWMiXM9w";
@@ -27,6 +28,7 @@ class _LocationScreenState extends State<LocationScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeLocationAndMap();
     _startLocationAutoRefresh();
     if (widget.triggerEmergencyRoute) {
@@ -41,6 +43,7 @@ class _LocationScreenState extends State<LocationScreen> {
       if (mounted) {
         setState(() {
           _controller.facingDirection = direction;
+          if (_isNavigating) _updateMapRotation();
         });
       }
     });
@@ -72,7 +75,7 @@ class _LocationScreenState extends State<LocationScreen> {
         setState(() {});
       } else {
         print("No current location, falling back to default");
-        _mapController.move(LatLng(37.7749, -122.4194), 10.0); // San Francisco
+        _mapController.move(LatLng(37.7749, -122.4194), 10.0);
       }
     } catch (e) {
       print("Initialization error: $e");
@@ -82,7 +85,7 @@ class _LocationScreenState extends State<LocationScreen> {
 
   void _startLocationAutoRefresh() {
     _locationRefreshTimer =
-        Timer.periodic(const Duration(seconds: 30), (timer) async {
+        Timer.periodic(const Duration(seconds: 10), (timer) async {
       await _controller.fetchLocations((isLoading) {
         if (mounted) {
           setState(() {
@@ -96,40 +99,55 @@ class _LocationScreenState extends State<LocationScreen> {
     });
   }
 
+  void _updateMapRotation() {
+    if (_controller.currentLocation != null) {
+      _mapController.rotate(_controller.facingDirection * (3.14159 / 180));
+    //   print("Map rotated to: ${_controller.facingDirection} degrees");
+    }
+  }
+
   Future<void> _handleEmergencyRoute() async {
     final int? familySize = await _showFamilySizeDialog();
     if (familySize != null) {
-      try {
-        await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
-          if (mounted) {
-            setState(() {
-              _controller.isLoading = isLoading;
-            });
-          }
-        });
-        if (_controller.routePoints.length < 2) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Route is too short to display.")),
-          );
-        } else if (_controller.nearestLocation == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("No suitable evacuation site found.")),
-          );
-        } else {
-          setState(() {});
-          _mapController.move(_controller.nearestLocationLatLng!, 17.0);
+      await _startNavigation(familySize);
+    }
+  }
+
+  Future<void> _startNavigation(int familySize) async {
+    try {
+      await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
+        if (mounted) {
+          setState(() {
+            _controller.isLoading = isLoading;
+          });
         }
-      } catch (e) {
+      });
+      if (_controller.routePoints.length < 2) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error finding route: $e")),
+          const SnackBar(content: Text("Route is too short to display.")),
         );
+      } else if (_controller.nearestLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No suitable evacuation site found.")),
+        );
+      } else {
+        setState(() {
+          _isNavigating = true;
+        });
+        _mapController.move(_controller.currentLocation!, 17.0);
+        _updateMapRotation();
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error finding route: $e")),
+      );
     }
   }
 
   void _scrollToCurrentLocation() {
     if (_controller.currentLocation != null) {
       _mapController.move(_controller.currentLocation!, 17.0);
+      if (_isNavigating) _updateMapRotation();
       print("Scrolled to current location: ${_controller.currentLocation}");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,9 +157,33 @@ class _LocationScreenState extends State<LocationScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    print("App lifecycle state changed to: $state");
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      if (_isNavigating && _controller.nearestLocationLatLng != null) {
+        final locationId = _controller.locations
+            .firstWhere((loc) =>
+                loc.lat == _controller.nearestLocationLatLng!.latitude &&
+                loc.lng == _controller.nearestLocationLatLng!.longitude)
+            .id;
+        _controller.resetCapacity(locationId);
+        print("App exited, capacity reset for location: $locationId");
+        setState(() {
+          _isNavigating = false;
+          _controller.routePoints.clear();
+          _controller.nearestLocation = null;
+          _controller.nearestLocationLatLng = null;
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _locationRefreshTimer.cancel();
     _controller.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -157,6 +199,23 @@ class _LocationScreenState extends State<LocationScreen> {
       context: context,
       builder: (context) => const FamilySizeDialog(),
     );
+  }
+
+  void _stopNavigation() {
+    if (_controller.nearestLocationLatLng != null) {
+      final locationId = _controller.locations
+          .firstWhere((loc) =>
+              loc.lat == _controller.nearestLocationLatLng!.latitude &&
+              loc.lng == _controller.nearestLocationLatLng!.longitude)
+          .id;
+      _controller.resetCapacity(locationId);
+    }
+    setState(() {
+      _isNavigating = false;
+      _controller.routePoints.clear();
+      _controller.nearestLocation = null;
+      _controller.nearestLocationLatLng = null;
+    });
   }
 
   @override
@@ -195,11 +254,8 @@ class _LocationScreenState extends State<LocationScreen> {
                         point: _controller.currentLocation!,
                         width: 50,
                         height: 50,
-                        child: Transform.rotate(
-                          angle: _controller.facingDirection * (3.14159 / 180),
-                          child: const Icon(Icons.navigation,
-                              color: Colors.blue, size: 50),
-                        ),
+                        child: const Icon(Icons.navigation,
+                            color: Colors.blue, size: 50),
                       ),
                     ..._getFilteredLocations().map((location) {
                       return Marker(
@@ -219,7 +275,7 @@ class _LocationScreenState extends State<LocationScreen> {
                               Container(
                                 height: 50,
                                 width: 40,
-                                padding: const EdgeInsets.all(10), // Fixed typo here
+                                padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(6),
@@ -250,6 +306,15 @@ class _LocationScreenState extends State<LocationScreen> {
                         ),
                       );
                     }).toList(),
+                    if (_controller.routePoints.isNotEmpty &&
+                        _controller.nearestLocationLatLng != null)
+                      Marker(
+                        point: _controller.nearestLocationLatLng!,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(Icons.flag,
+                            color: Colors.red, size: 30),
+                      ),
                   ],
                 ),
                 if (_controller.routePoints.isNotEmpty &&
@@ -339,6 +404,16 @@ class _LocationScreenState extends State<LocationScreen> {
                 child: const Icon(Icons.my_location, color: Colors.white),
               ),
             ),
+            if (_isNavigating)
+              Positioned(
+                bottom: 15,
+                right: 20,
+                child: FloatingActionButton(
+                  onPressed: _stopNavigation,
+                  backgroundColor: Colors.green,
+                  child: const Icon(Icons.stop, color: Colors.white),
+                ),
+              ),
           ],
         ),
       ),
@@ -346,31 +421,15 @@ class _LocationScreenState extends State<LocationScreen> {
         onPressed: () async {
           final int? familySize = await _showFamilySizeDialog();
           if (familySize != null) {
-            try {
-              await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
-                if (mounted) {
-                  setState(() {
-                    _controller.isLoading = isLoading;
-                  });
-                }
-              });
-              if (_controller.routePoints.length < 2) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Route is too short to display.")),
-                );
-              } else if (_controller.nearestLocation == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text("No suitable evacuation site found.")),
-                );
-              } else {
-                setState(() {});
-                _mapController.move(_controller.nearestLocationLatLng!, 17.0);
-              }
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(e.toString())),
-              );
+            await _startNavigation(familySize);
+          } else {
+            if (_controller.nearestLocationLatLng != null) {
+              final locationId = _controller.locations
+                  .firstWhere((loc) =>
+                      loc.lat == _controller.nearestLocationLatLng!.latitude &&
+                      loc.lng == _controller.nearestLocationLatLng!.longitude)
+                  .id;
+              _controller.resetCapacity(locationId);
             }
           }
         },
@@ -388,6 +447,9 @@ class _LocationScreenState extends State<LocationScreen> {
         setState(() {
           _selectedHazardType = isClear ? null : type;
           _controller.routePoints.clear();
+          _isNavigating = false;
+          _controller.nearestLocation = null;
+          _controller.nearestLocationLatLng = null;
         });
       },
       child: Container(
@@ -516,7 +578,7 @@ class _LocationScreenState extends State<LocationScreen> {
                 const Icon(Icons.people, color: Colors.blue, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Capacity: ${location.capacity}',
+                  'Capacity: ${location.capacity}/${location.actualCapacity}',
                   style: const TextStyle(fontSize: 16, color: Colors.black87),
                 ),
               ],
@@ -616,8 +678,13 @@ class _LocationScreenState extends State<LocationScreen> {
                           const SnackBar(
                               content: Text("Route is too short to display.")),
                         );
+                      } else {
+                        setState(() {
+                          _isNavigating = true;
+                        });
+                        _mapController.move(_controller.currentLocation!, 17.0);
+                        _updateMapRotation();
                       }
-                      setState(() {});
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(e.toString())),

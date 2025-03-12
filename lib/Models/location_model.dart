@@ -3,15 +3,16 @@ class LocationModel {
   final String name;
   final String description;
   final List<String> contacts;
-  final String? contactPersonName; // Added from server schema
-  final int capacity;
+  final String? contactPersonName;
+  int capacity; // Dynamic, real-time capacity
+  final int actualCapacity; // Original, fixed capacity
   final String hazardType;
   final double lat;
   final double lng;
   final String locationName;
-  final String visibility; // Added from server schema
+  final String visibility;
   final List<String> images;
-  final DateTime? createdAt; // Added from server schema (optional)
+  final DateTime? createdAt;
 
   LocationModel({
     required this.id,
@@ -20,6 +21,7 @@ class LocationModel {
     required this.contacts,
     this.contactPersonName,
     required this.capacity,
+    required this.actualCapacity,
     required this.hazardType,
     required this.lat,
     required this.lng,
@@ -38,6 +40,7 @@ class LocationModel {
           (json['contacts'] as List?)?.map((e) => e.toString()).toList() ?? [],
       contactPersonName: json['contactPersonName'] as String?,
       capacity: json['capacity'] ?? 0,
+      actualCapacity: json['actualCapacity'] ?? json['capacity'] ?? 0, // Fallback to capacity if not provided
       hazardType: json['hazardType']?.toString() ?? 'Unknown',
       lat: (json['lat'] as num?)?.toDouble() ?? 0.0,
       lng: (json['lng'] as num?)?.toDouble() ?? 0.0,
