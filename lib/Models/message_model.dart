@@ -1,10 +1,10 @@
 class Messages {
   final String id;
   final String name;
-
   final String subject;
   final String type;
   final String message;
+  final String? emergencyType; // Optional field
   final String createdAt;
   final String updatedAt;
   final int v;
@@ -15,6 +15,7 @@ class Messages {
     required this.subject,
     required this.type,
     required this.message,
+    this.emergencyType, // Nullable
     required this.createdAt,
     required this.updatedAt,
     required this.v,
@@ -27,6 +28,7 @@ class Messages {
       subject: json['subject'],
       type: json['type'],
       message: json['message'],
+      emergencyType: json['emergencyType'], // May be null
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
       v: json['__v'],

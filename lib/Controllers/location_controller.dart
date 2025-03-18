@@ -217,7 +217,9 @@ class LocationController {
   }
 
   Future<void> fetchRouteWithCapacity(
-      int familySize, void Function(bool) onLoadingChanged) async {
+      int familySize,
+      void Function(bool) onLoadingChanged,
+      {String? hazardType}) async {
     if (currentLocation == null || locations.isEmpty) {
       throw Exception("Current location or locations list not available.");
     }
@@ -237,12 +239,17 @@ class LocationController {
     LocationModel? suitableLocation;
     double? shortestDistance;
 
+    // Filter locations based on hazardType if provided
+    var filteredLocations = hazardType != null
+        ? locations.where((loc) => loc.hazardType == hazardType).toList()
+        : locations;
+
     // Find nearest location with sufficient capacity
-    for (var location in locations) {
+    for (var location in filteredLocations) {
       final distance = calculateDistance(
           currentLocation!, LatLng(location.lat, location.lng));
       if (location.capacity >= familySize &&
-          (shortestDistance == null || distance < shortestDistance!)) {
+          (shortestDistance == null || distance < shortestDistance)) {
         shortestDistance = distance;
         suitableLocation = location;
       }
@@ -250,16 +257,16 @@ class LocationController {
 
     if (suitableLocation == null) {
       onLoadingChanged(false);
-      throw Exception("No evacuation site with sufficient capacity found.");
+      throw Exception(
+          "No evacuation site with sufficient capacity found for ${hazardType ?? 'any'} hazard.");
     }
 
     nearestLocation = {
       'location': '${suitableLocation.lat},${suitableLocation.lng}',
       'location_name': suitableLocation.name,
       'details': suitableLocation.description,
-      'image_url': suitableLocation.images.isNotEmpty
-          ? suitableLocation.images.first
-          : '',
+      'image_url':
+          suitableLocation.images.isNotEmpty ? suitableLocation.images.first : '',
       'travel_time': 'Unknown',
     };
     nearestLocationLatLng = LatLng(suitableLocation.lat, suitableLocation.lng);
@@ -268,12 +275,12 @@ class LocationController {
     currentFamilySize = familySize;
     currentLocationId = suitableLocation.id;
 
-    // Calculate new capacity
+    // Calculate new capacity (only update capacity, not actualCapacity)
     final newCapacity = suitableLocation.capacity - familySize;
     print(
-        "Before update - Location: ${suitableLocation.name}, Capacity: ${suitableLocation.capacity}, Family Size: $familySize, New Capacity: $newCapacity");
+        "Before update - Location: ${suitableLocation.name}, Capacity: ${suitableLocation.capacity}, Actual Capacity: ${suitableLocation.actualCapacity}, Family Size: $familySize, New Capacity: $newCapacity");
 
-    // Update capacity on server
+    // Update only capacity on server
     await _updateCapacity(suitableLocation.id, newCapacity);
 
     const apiKey = "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed";
@@ -308,8 +315,8 @@ class LocationController {
             "Failed to fetch route: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      // Revert capacity on failure
-      await _updateCapacity(suitableLocation.id, suitableLocation.capacity);
+      // Revert capacity on failure to original capacity (not actualCapacity)
+      await _updateCapacity(suitableLocation.id, suitableLocation.actualCapacity);
       print("Error fetching route with capacity: $e");
       throw Exception("Error fetching route: $e");
     } finally {
@@ -319,7 +326,7 @@ class LocationController {
 
   Future<void> _updateCapacity(String locationId, int newCapacity) async {
     final location = locations.firstWhere((loc) => loc.id == locationId);
-    final oldCapacity = location.capacity;
+    final oldCapacity = location.capacity; // Store old capacity for rollback
     try {
       final response = await http.put(
         Uri.parse(
@@ -331,7 +338,7 @@ class LocationController {
           "Update capacity response: ${response.statusCode}, Body: ${response.body}");
       if (response.statusCode == 200) {
         location.capacity = newCapacity;
-        print("Capacity updated for $locationId: $newCapacity");
+        print("Capacity updated for $locationId: $newCapacity (Actual Capacity remains ${location.actualCapacity})");
       } else {
         throw Exception("Failed to update capacity: ${response.statusCode}");
       }
@@ -377,17 +384,8 @@ class LocationController {
   Future<void> _onArrival() async {
     if (currentLocationId != null && currentFamilySize != null) {
       final location = locations.firstWhere((loc) => loc.id == currentLocationId!);
-      final newCapacity = location.capacity + currentFamilySize!;
-      print(
-          "User arrived at ${location.name}, restoring capacity: ${location.capacity} + $currentFamilySize = $newCapacity");
-
-      await _updateCapacity(currentLocationId!, newCapacity);
+      print("User arrived at ${location.name}, capacity remains ${location.capacity} until 'Done' is pressed");
       positionSubscription?.cancel(); // Stop monitoring
-      routePoints.clear();
-      nearestLocation = null;
-      nearestLocationLatLng = null;
-      currentFamilySize = null;
-      currentLocationId = null;
     }
   }
 

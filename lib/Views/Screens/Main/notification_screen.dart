@@ -146,7 +146,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.warning;
       case 'alert':
         return Icons.error;
-      case 'immediately':
+      case 'emergency':
         return Icons.priority_high;
       default:
         return Icons.notification_important;
@@ -279,7 +279,7 @@ class MessageDetailScreen extends StatelessWidget {
         return Icons.warning;
       case 'alert':
         return Icons.error;
-      case 'immediately':
+      case 'emergency':
         return Icons.priority_high;
       default:
         return Icons.notification_important;
@@ -292,7 +292,7 @@ class MessageDetailScreen extends StatelessWidget {
         return Colors.orange[800]!;
       case 'alert':
         return Colors.red[800]!;
-      case 'immediately':
+      case 'emergency':
         return Colors.red[900]!;
       default:
         return Colors.blueGrey[700]!;
@@ -303,7 +303,10 @@ class MessageDetailScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const LocationScreen(triggerEmergencyRoute: true),
+        builder: (context) => LocationScreen(
+          triggerEmergencyRoute: true,
+          emergencyType: message.emergencyType, // Pass emergencyType
+        ),
       ),
     );
   }
@@ -388,7 +391,7 @@ class MessageDetailScreen extends StatelessWidget {
                   height: 1.6,
                 ),
               ),
-              if (message.type.toLowerCase() == 'immediately') ...[
+              if (message.type.toLowerCase() == 'emergency') ...[
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: () => _navigateToLocation(context),

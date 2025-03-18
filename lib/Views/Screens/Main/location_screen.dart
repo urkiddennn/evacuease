@@ -7,8 +7,13 @@ import 'package:evacuease/Models/location_model.dart';
 
 class LocationScreen extends StatefulWidget {
   final bool triggerEmergencyRoute;
-  const LocationScreen({Key? key, this.triggerEmergencyRoute = false})
-      : super(key: key);
+  final String? emergencyType; // New parameter for emergency type
+
+  const LocationScreen({
+    Key? key,
+    this.triggerEmergencyRoute = false,
+    this.emergencyType,
+  }) : super(key: key);
 
   @override
   State<LocationScreen> createState() => _LocationScreenState();
@@ -29,6 +34,10 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Pre-set _selectedHazardType if emergencyType is provided
+    if (widget.emergencyType != null) {
+      _selectedHazardType = widget.emergencyType;
+    }
     _initializeLocationAndMap();
     _startLocationAutoRefresh();
     if (widget.triggerEmergencyRoute) {
@@ -102,7 +111,6 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   void _updateMapRotation() {
     if (_controller.currentLocation != null) {
       _mapController.rotate(_controller.facingDirection * (3.14159 / 180));
-    //   print("Map rotated to: ${_controller.facingDirection} degrees");
     }
   }
 
@@ -115,13 +123,15 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
 
   Future<void> _startNavigation(int familySize) async {
     try {
+      // Pass the selected hazard type to filter locations
       await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
         if (mounted) {
           setState(() {
             _controller.isLoading = isLoading;
           });
         }
-      });
+      }, hazardType: _selectedHazardType);
+
       if (_controller.routePoints.length < 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Route is too short to display.")),
@@ -202,20 +212,53 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   }
 
   void _stopNavigation() {
-    if (_controller.nearestLocationLatLng != null) {
-      final locationId = _controller.locations
-          .firstWhere((loc) =>
-              loc.lat == _controller.nearestLocationLatLng!.latitude &&
-              loc.lng == _controller.nearestLocationLatLng!.longitude)
-          .id;
-      _controller.resetCapacity(locationId);
+    if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+      _controller.resetCapacity(_controller.currentLocationId!);
     }
     setState(() {
       _isNavigating = false;
       _controller.routePoints.clear();
       _controller.nearestLocation = null;
       _controller.nearestLocationLatLng = null;
+      _controller.currentFamilySize = null;
+      _controller.currentLocationId = null;
     });
+  }
+
+  void _cancelNavigation() {
+    if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+      _controller.resetCapacity(_controller.currentLocationId!);
+    }
+    setState(() {
+      _isNavigating = false;
+      _controller.routePoints.clear();
+      _controller.nearestLocation = null;
+      _controller.nearestLocationLatLng = null;
+      _controller.currentFamilySize = null;
+      _controller.currentLocationId = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Navigation cancelled, capacity restored.")),
+    );
+  }
+
+  void _completeNavigation() {
+    if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+      final locationId = _controller.currentLocationId!;
+      final location = _controller.locations.firstWhere((loc) => loc.id == locationId);
+      print("Navigation completed for location: $locationId, capacity remains ${location.capacity}");
+    }
+    setState(() {
+      _isNavigating = false;
+      _controller.routePoints.clear();
+      _controller.nearestLocation = null;
+      _controller.nearestLocationLatLng = null;
+      _controller.currentFamilySize = null;
+      _controller.currentLocationId = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Navigation completed, capacity unchanged.")),
+    );
   }
 
   @override
@@ -306,15 +349,7 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
                         ),
                       );
                     }).toList(),
-                    if (_controller.routePoints.isNotEmpty &&
-                        _controller.nearestLocationLatLng != null)
-                      Marker(
-                        point: _controller.nearestLocationLatLng!,
-                        width: 40,
-                        height: 40,
-                        child: const Icon(Icons.flag,
-                            color: Colors.red, size: 30),
-                      ),
+
                   ],
                 ),
                 if (_controller.routePoints.isNotEmpty &&
@@ -404,16 +439,35 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
                 child: const Icon(Icons.my_location, color: Colors.white),
               ),
             ),
-            if (_isNavigating)
+            if (_isNavigating) ...[
               Positioned(
-                bottom: 15,
-                right: 20,
+                bottom: 80,
+                left: 20, // Position Cancel button
+                child: FloatingActionButton(
+                  onPressed: _cancelNavigation,
+                  backgroundColor: Colors.grey,
+                  child: const Icon(Icons.cancel, color: Colors.white),
+                ),
+              ),
+              Positioned(
+                bottom: 145,
+                left: 20, // Position Done button
+                child: FloatingActionButton(
+                  onPressed: _completeNavigation,
+                  backgroundColor: Colors.blue,
+                  child: const Icon(Icons.check, color: Colors.white),
+                ),
+              ),
+              Positioned(
+                bottom: 210,
+                left: 20, // Position Stop button
                 child: FloatingActionButton(
                   onPressed: _stopNavigation,
                   backgroundColor: Colors.green,
                   child: const Icon(Icons.stop, color: Colors.white),
                 ),
               ),
+            ],
           ],
         ),
       ),
@@ -423,13 +477,8 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
           if (familySize != null) {
             await _startNavigation(familySize);
           } else {
-            if (_controller.nearestLocationLatLng != null) {
-              final locationId = _controller.locations
-                  .firstWhere((loc) =>
-                      loc.lat == _controller.nearestLocationLatLng!.latitude &&
-                      loc.lng == _controller.nearestLocationLatLng!.longitude)
-                  .id;
-              _controller.resetCapacity(locationId);
+            if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+              _controller.resetCapacity(_controller.currentLocationId!);
             }
           }
         },
