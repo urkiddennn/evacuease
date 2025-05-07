@@ -16,16 +16,15 @@ class _FirstScreenState extends State<FirstScreen> {
   final List<Map<String, String>> onboardingData = [
     {
       'imagePath': 'assets/images/bg-1.jpg',
-      'title':
-          'Discover an easier route in Municipality of Tago during disaster',
+      'title': 'EvacueEase',
       'description':
-          'Lorem epso, hello my beautiful wifey. This is a sample text for the app.',
+          'EvacuEase is an AI-based application for risk analysis and evacuation routing',
     },
     {
       'imagePath': 'assets/images/bg-2.jpg',
-      'title': 'Real-time Alerts for Safe Evacuation',
+      'title': 'Smart messaging for Safe Evacuation',
       'description':
-          'Stay updated with real-time alerts and evacuation guides to stay safe.',
+          'Stay updated with Smart messaging and evacuation guides to stay safe.',
     },
     {
       'imagePath': 'assets/images/bg-2.jpg',

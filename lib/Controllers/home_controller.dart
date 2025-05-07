@@ -167,6 +167,8 @@ class HomeController {
     weatherFactory = WeatherFactory(apiKey);
   }
 
+  WeatherData? get weatherData => null;
+
   Future<void> loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset('assets/model.tflite');
