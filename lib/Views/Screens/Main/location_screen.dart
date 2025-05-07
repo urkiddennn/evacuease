@@ -2,12 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart';
 import 'package:evacuease/Controllers/location_controller.dart';
 import 'package:evacuease/Models/location_model.dart';
 
 class LocationScreen extends StatefulWidget {
   final bool triggerEmergencyRoute;
-  final String? emergencyType; // New parameter for emergency type
+  final String? emergencyType;
 
   const LocationScreen({
     Key? key,
@@ -19,7 +23,8 @@ class LocationScreen extends StatefulWidget {
   State<LocationScreen> createState() => _LocationScreenState();
 }
 
-class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObserver {
+class _LocationScreenState extends State<LocationScreen>
+    with WidgetsBindingObserver {
   final LocationController _controller = LocationController();
   final MapController _mapController = MapController();
   bool _isMapLoaded = false;
@@ -34,7 +39,6 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Pre-set _selectedHazardType if emergencyType is provided
     if (widget.emergencyType != null) {
       _selectedHazardType = widget.emergencyType;
     }
@@ -48,30 +52,63 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   }
 
   void _initializeLocationAndMap() async {
-    _controller.startCompass((direction) {
-      if (mounted) {
-        setState(() {
-          _controller.facingDirection = direction;
-          if (_isNavigating) _updateMapRotation();
-        });
-      }
-    });
+    setState(() => _controller.isLoading = true);
 
     try {
-      await _controller.getCurrentLocation((isLoading) {
-        if (mounted) {
-          setState(() {
-            _controller.isLoading = isLoading;
-          });
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text("Location services are disabled. Please enable them."),
+          ),
+        );
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      // Check and request location permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Location permission denied.")),
+          );
+          return;
         }
-      }).timeout(const Duration(seconds: 10), onTimeout: () {
-        print("Location fetch timed out");
-        setState(() => _controller.isLoading = false);
+      }
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Location permission permanently denied. Please enable it in settings.",
+            ),
+          ),
+        );
+        await Geolocator.openAppSettings();
+        return;
+      }
+
+      // Fetch current location
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 10), onTimeout: () {
+        throw Exception("Location fetch timed out");
       });
 
-      if (_controller.currentLocation != null) {
+      if (mounted) {
+        setState(() {
+          _controller.currentLocation =
+              LatLng(position.latitude, position.longitude);
+          _controller.isLoading = false;
+        });
+
         print("Moving map to: ${_controller.currentLocation}");
         _mapController.move(_controller.currentLocation!, 17.0);
+
+        await _controller._updateCurrentPlaceName();
 
         await _controller.fetchLocations((isLoading) {
           if (mounted) {
@@ -80,16 +117,31 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
             });
           }
         });
+
         _controller.findNearestLocation();
         setState(() {});
-      } else {
-        print("No current location, falling back to default");
-        _mapController.move(LatLng(37.7749, -122.4194), 10.0);
       }
     } catch (e) {
-      print("Initialization error: $e");
-      setState(() => _controller.isLoading = false);
+      if (mounted) {
+        setState(() {
+          _controller.isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to get location: $e")),
+        );
+        print("Initialization error: $e");
+        _mapController.move(const LatLng(37.7749, -122.4194), 10.0);
+      }
     }
+
+    _controller.startCompass((direction) {
+      if (mounted) {
+        setState(() {
+          _controller.facingDirection = direction;
+          if (_isNavigating) _updateMapRotation();
+        });
+      }
+    });
   }
 
   void _startLocationAutoRefresh() {
@@ -123,7 +175,6 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
 
   Future<void> _startNavigation(int familySize) async {
     try {
-      // Pass the selected hazard type to filter locations
       await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
         if (mounted) {
           setState(() {
@@ -170,7 +221,8 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     print("App lifecycle state changed to: $state");
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
       if (_isNavigating && _controller.nearestLocationLatLng != null) {
         final locationId = _controller.locations
             .firstWhere((loc) =>
@@ -212,7 +264,8 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   }
 
   void _stopNavigation() {
-    if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+    if (_controller.nearestLocationLatLng != null &&
+        _controller.currentLocationId != null) {
       _controller.resetCapacity(_controller.currentLocationId!);
     }
     setState(() {
@@ -226,7 +279,8 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   }
 
   void _cancelNavigation() {
-    if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+    if (_controller.nearestLocationLatLng != null &&
+        _controller.currentLocationId != null) {
       _controller.resetCapacity(_controller.currentLocationId!);
     }
     setState(() {
@@ -243,10 +297,13 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   }
 
   void _completeNavigation() {
-    if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+    if (_controller.nearestLocationLatLng != null &&
+        _controller.currentLocationId != null) {
       final locationId = _controller.currentLocationId!;
-      final location = _controller.locations.firstWhere((loc) => loc.id == locationId);
-      print("Navigation completed for location: $locationId, capacity remains ${location.capacity}");
+      final location =
+          _controller.locations.firstWhere((loc) => loc.id == locationId);
+      print(
+          "Navigation completed for location: $locationId, capacity remains ${location.capacity}");
     }
     setState(() {
       _isNavigating = false;
@@ -257,7 +314,8 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
       _controller.currentLocationId = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Navigation completed, capacity unchanged.")),
+      const SnackBar(
+          content: Text("Navigation completed, capacity unchanged.")),
     );
   }
 
@@ -271,8 +329,8 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: _controller.currentLocation ??
-                    LatLng(37.7749, -122.4194),
-                initialZoom: _controller.currentLocation != null ? 20.0 : 15.0,
+                    const LatLng(37.7749, -122.4194),
+                initialZoom: _controller.currentLocation != null ? 17.0 : 10.0,
                 onMapReady: () {
                   print("Map is ready");
                   setState(() => _isMapLoaded = true);
@@ -287,8 +345,6 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
                     'id': 'mapbox/satellite-streets-v12',
                   },
                   userAgentPackageName: 'com.example.evacuease',
-                  errorImage:
-                      const NetworkImage('https://via.placeholder.com/256'),
                 ),
                 MarkerLayer(
                   markers: [
@@ -349,7 +405,6 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
                         ),
                       );
                     }).toList(),
-
                   ],
                 ),
                 if (_controller.routePoints.isNotEmpty &&
@@ -357,7 +412,6 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        pattern: StrokePattern.dashed(segments: const [10, 10]),
                         points: _controller.routePoints,
                         color: Colors.red,
                         strokeWidth: 5,
@@ -370,6 +424,32 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
               Container(
                 color: Colors.black38,
                 child: const Center(child: CircularProgressIndicator()),
+              )
+            else if (_controller.currentLocation == null &&
+                !_controller.isLoading)
+              Container(
+                color: Colors.black38,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Unable to fetch location. Please try again.",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _initializeLocationAndMap,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[400],
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text("Retry"),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             Positioned(
               top: 10,
@@ -442,7 +522,7 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
             if (_isNavigating) ...[
               Positioned(
                 bottom: 80,
-                left: 20, // Position Cancel button
+                left: 20,
                 child: FloatingActionButton(
                   onPressed: _cancelNavigation,
                   backgroundColor: Colors.grey,
@@ -451,7 +531,7 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
               ),
               Positioned(
                 bottom: 145,
-                left: 20, // Position Done button
+                left: 20,
                 child: FloatingActionButton(
                   onPressed: _completeNavigation,
                   backgroundColor: Colors.blue,
@@ -460,7 +540,7 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
               ),
               Positioned(
                 bottom: 210,
-                left: 20, // Position Stop button
+                left: 20,
                 child: FloatingActionButton(
                   onPressed: _stopNavigation,
                   backgroundColor: Colors.green,
@@ -477,7 +557,8 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
           if (familySize != null) {
             await _startNavigation(familySize);
           } else {
-            if (_controller.nearestLocationLatLng != null && _controller.currentLocationId != null) {
+            if (_controller.nearestLocationLatLng != null &&
+                _controller.currentLocationId != null) {
               _controller.resetCapacity(_controller.currentLocationId!);
             }
           }
@@ -555,14 +636,14 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
   Widget _buildLocationDetails(LocationModel location) {
     return Container(
       padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black26,
             blurRadius: 10,
-            offset: const Offset(0, -2),
+            offset: Offset(0, -2),
           ),
         ],
       ),
@@ -768,6 +849,10 @@ class _LocationScreenState extends State<LocationScreen> with WidgetsBindingObse
       ),
     );
   }
+}
+
+extension on LocationController {
+  _updateCurrentPlaceName() {}
 }
 
 class FamilySizeDialog extends StatefulWidget {
