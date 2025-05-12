@@ -10,4 +10,5 @@ class RouteNames {
   static const String userScreen = '/userScreen';
 
   static const String riskArea = '/riskArea';
+  static const String hazardRank = '/hazardRank';
 }

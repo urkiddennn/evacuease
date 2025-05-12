@@ -1,5 +1,6 @@
 import 'package:evacuease/Models/home_model.dart';
 import 'package:evacuease/Views/Screens/main/risk_area_screen.dart';
+import 'package:evacuease/Views/Screens/main/hazard_rank_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:evacuease/Views/Screens/main/home_screen.dart';
 import 'package:evacuease/Views/Screens/main/location_screen.dart';
@@ -35,6 +36,20 @@ class RouteGenerator {
         return MaterialPageRoute(builder: (_) => const UserScreen());
       case RouteNames.riskArea:
         return MaterialPageRoute(builder: (_) => const RiskAreaScreen());
+      case RouteNames.hazardRank:
+        final args = settings.arguments;
+        if (args is String) {
+          return MaterialPageRoute(
+            builder: (_) => HazardRankScreen(hazardType: args),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(
+              child: Text('Error: No hazard type provided'),
+            ),
+          ),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

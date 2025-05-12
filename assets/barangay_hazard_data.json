@@ -1,0 +1,410 @@
+[
+    {
+        "name": "Alba",
+        "latitude": 8.9674781,
+        "longitude": 126.1346125,
+        "hazardScores": {
+            "Earthquake": 6.041767739443678,
+            "Landslide": 3.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Red - High Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Anahao Bag-o",
+        "latitude": 8.9632271,
+        "longitude": 126.1606863,
+        "hazardScores": {
+            "Earthquake": 6.039990637874257,
+            "Landslide": 1.0,
+            "Flood": 4.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "red - High",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Anahao Daan",
+        "latitude": 8.9632548,
+        "longitude": 126.1719341,
+        "hazardScores": {
+            "Earthquake": 6.039284706475803,
+            "Landslide": 1.0,
+            "Flood": 3.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Red Orange - Medium",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Badong",
+        "latitude": 8.9476053,
+        "longitude": 126.1011226,
+        "hazardScores": {
+            "Earthquake": 6.041616943164596,
+            "Landslide": 3.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Red - High Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Bajao",
+        "latitude": 8.9854513,
+        "longitude": 126.1533773,
+        "hazardScores": {
+            "Earthquake": 6.042344438005981,
+            "Landslide": 3.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Red - High Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Bangsud",
+        "latitude": 8.9596191,
+        "longitude": 126.1464998,
+        "hazardScores": {
+            "Earthquake": 6.040514207088503,
+            "Landslide": 1.0,
+            "Flood": 3.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Red Orange - Medium",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Cabangahan",
+        "latitude": 8.9604729,
+        "longitude": 126.0946154,
+        "hazardScores": {
+            "Earthquake": 6.042809632071105,
+            "Landslide": 1.0,
+            "Flood": 2.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Cagdapao",
+        "latitude": 8.9954761,
+        "longitude": 126.1558127,
+        "hazardScores": {
+            "Earthquake": 6.043153415330457,
+            "Landslide": 1.5,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Violet - Medium Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Camagong",
+        "latitude": 9.001707,
+        "longitude": 126.1932886,
+        "hazardScores": {
+            "Earthquake": 6.041078753153142,
+            "Landslide": 1.0,
+            "Flood": 2.5,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Orange - Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Caras-an",
+        "latitude": 8.8976866,
+        "longitude": 126.0926214,
+        "hazardScores": {
+            "Earthquake": 6.038725427694349,
+            "Landslide": 1.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Cayale",
+        "latitude": 8.9838246,
+        "longitude": 126.1189457,
+        "hazardScores": {
+            "Earthquake": 6.04389686181389,
+            "Landslide": 2.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Violet - Medium Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Dayo-an",
+        "latitude": 9.0259144,
+        "longitude": 126.1853197,
+        "hazardScores": {
+            "Earthquake": 6.133334208043921,
+            "Landslide": 2.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Violet - Medium Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Gamut",
+        "latitude": 9.0046211,
+        "longitude": 126.1670673,
+        "hazardScores": {
+            "Earthquake": 6.043347828070903,
+            "Landslide": 2.0,
+            "Flood": 2.0,
+            "Storm Surge": 1.5
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Violet - Medium Susceptibility",
+            "Flood": "Yellow - Low",
+            "Storm Surge": "Medium"
+        }
+    },
+    {
+        "name": "Jubang",
+        "latitude": 8.9839995,
+        "longitude": 126.2262931,
+        "hazardScores": {
+            "Earthquake": 6.03667253144667,
+            "Landslide": 2.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Violet - Medium Susceptibility",
+            "Flood": "Yellow - Medium",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Kinabigtasan",
+        "latitude": 8.9783538,
+        "longitude": 126.1774005,
+        "hazardScores": {
+            "Earthquake": 6.040164456885635,
+            "Landslide": 1.0,
+            "Flood": 4.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Red - High",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Layog",
+        "latitude": 8.9177761,
+        "longitude": 126.0959676,
+        "hazardScores": {
+            "Earthquake": 6.039787948013605,
+            "Landslide": 3.0,
+            "Flood": 3.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Red - High Susceptibility",
+            "Flood": "Red Orange - Medium",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Lindoy",
+        "latitude": 8.9448407,
+        "longitude": 126.1342049,
+        "hazardScores": {
+            "Earthquake": 6.040016020851681,
+            "Landslide": 3.0,
+            "Flood": 1.0,
+            "Storm Surge": 1.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Red - High Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Low"
+        }
+    },
+    {
+        "name": "Mercedes",
+        "latitude": 0.0,
+        "longitude": 0.0,
+        "hazardScores": {
+            "Earthquake": 1.0,
+            "Landslide": 1.0,
+            "Flood": 1.0,
+            "Storm Surge": 3.0
+        },
+        "hazardLevels": {
+            "Earthquake": "I - Scarcely perceptible",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "High"
+        }
+    },
+    {
+        "name": "Purisima (Pob.)",
+        "latitude": 9.0178894,
+        "longitude": 126.2335553,
+        "hazardScores": {
+            "Earthquake": 6.18989211714935,
+            "Landslide": 1.0,
+            "Flood": 1.0,
+            "Storm Surge": 3.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "High"
+        }
+    },
+    {
+        "name": "Sumo-sumo",
+        "latitude": 8.977167,
+        "longitude": 126.238405,
+        "hazardScores": {
+            "Earthquake": 6.035056190771945,
+            "Landslide": 1.0,
+            "Flood": 1.0,
+            "Storm Surge": 2.5
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "High"
+        }
+    },
+    {
+        "name": "Umbay",
+        "latitude": 8.9867111,
+        "longitude": 126.2361208,
+        "hazardScores": {
+            "Earthquake": 6.035966325736146,
+            "Landslide": 1.0,
+            "Flood": 1.0,
+            "Storm Surge": 3.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "High"
+        }
+    },
+    {
+        "name": "Unaban",
+        "latitude": 8.9949463,
+        "longitude": 126.1889326,
+        "hazardScores": {
+            "Earthquake": 6.0407939151592025,
+            "Landslide": 1.0,
+            "Flood": 2.5,
+            "Storm Surge": 2.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Orange - Low",
+            "Storm Surge": "Medium"
+        }
+    },
+    {
+        "name": "Unidos",
+        "latitude": 8.9853186,
+        "longitude": 126.2020099,
+        "hazardScores": {
+            "Earthquake": 6.038887926369457,
+            "Landslide": 1.0,
+            "Flood": 1.0,
+            "Storm Surge": 2.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Medium"
+        }
+    },
+    {
+        "name": "Victoria",
+        "latitude": 9.0348458,
+        "longitude": 126.2097035,
+        "hazardScores": {
+            "Earthquake": 6.194478400438376,
+            "Landslide": 1.0,
+            "Flood": 1.0,
+            "Storm Surge": 2.0
+        },
+        "hazardLevels": {
+            "Earthquake": "VI - Very strong",
+            "Landslide": "Yellow - Low Susceptibility",
+            "Flood": "Yellow - Very Low",
+            "Storm Surge": "Medium"
+        }
+    }
+]

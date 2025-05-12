@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:weather/weather.dart';
@@ -7,161 +9,19 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geocoding/geocoding.dart';
 import '../Models/home_model.dart';
 
+class Survey {
+  // Placeholder to avoid breaking existing references
+}
+
 class HomeController {
   final String apiKey = '6ecafe65255292c779f938f49600c1a1';
   late WeatherFactory weatherFactory;
   Weather? currentWeather;
   Position? currentPosition;
-  List<RiskArea> riskAreas = []; // Top 3 for HomeScreen
-  List<RiskArea> allRiskAreas = []; // All barangays for RiskAreaScreen
+  List<RiskArea> riskAreas = [];
+  List<RiskArea> allRiskAreas = [];
   Interpreter? _interpreter;
-
-  final List<Map<String, dynamic>> barangays = [
-    {
-      "name": "Alba",
-      "latitude": 8.9674781,
-      "longitude": 126.1346125,
-      "hazardLevels": [0, 0, 3, 1, 2]
-    },
-    {
-      "name": "Anahao Bag-o",
-      "latitude": 8.9632271,
-      "longitude": 126.1606863,
-      "hazardLevels": [0, 0, 2, 1, 2]
-    },
-    {
-      "name": "Anahao Daan",
-      "latitude": 8.9632548,
-      "longitude": 126.1719341,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Badong",
-      "latitude": 8.9476053,
-      "longitude": 126.1011226,
-      "hazardLevels": [0, 0, 2, 3, 3]
-    },
-    {
-      "name": "Bajao",
-      "latitude": 8.9854513,
-      "longitude": 126.1533773,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Bangsud",
-      "latitude": 8.9596191,
-      "longitude": 126.1464998,
-      "hazardLevels": [0, 0, 2, 2, 1]
-    },
-    {
-      "name": "Cabangahan",
-      "latitude": 8.9604729,
-      "longitude": 126.0946154,
-      "hazardLevels": [0, 0, 2, 2, 2]
-    },
-    {
-      "name": "Cagdapao",
-      "latitude": 8.9954761,
-      "longitude": 126.1558127,
-      "hazardLevels": [0, 0, 2, 1, 2]
-    },
-    {
-      "name": "Camagong",
-      "latitude": 9.0017070,
-      "longitude": 126.1932886,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Caras-an",
-      "latitude": 8.8976866,
-      "longitude": 126.0926214,
-      "hazardLevels": [0, 0, 3, 2, 2]
-    },
-    {
-      "name": "Cayale",
-      "latitude": 8.9838246,
-      "longitude": 126.1189457,
-      "hazardLevels": [0, 0, 2, 2, 1]
-    },
-    {
-      "name": "Dayo-an",
-      "latitude": 9.0259144,
-      "longitude": 126.1853197,
-      "hazardLevels": [0, 0, 2, 1, 2]
-    },
-    {
-      "name": "Gamut",
-      "latitude": 9.0046211,
-      "longitude": 126.1670673,
-      "hazardLevels": [0, 0, 2, 2, 2]
-    },
-    {
-      "name": "Jubang",
-      "latitude": 8.9839995,
-      "longitude": 126.2262931,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Kinabigtasan",
-      "latitude": 8.9783538,
-      "longitude": 126.1774005,
-      "hazardLevels": [0, 0, 2, 1, 2]
-    },
-    {
-      "name": "Layog",
-      "latitude": 8.9177761,
-      "longitude": 126.0959676,
-      "hazardLevels": [0, 0, 2, 2, 1]
-    },
-    {
-      "name": "Lindoy",
-      "latitude": 8.9448407,
-      "longitude": 126.1342049,
-      "hazardLevels": [0, 0, 2, 3, 1]
-    },
-    {
-      "name": "Mercedes",
-      "latitude": 0.0,
-      "longitude": 0.0,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Purisima (Pob.)",
-      "latitude": 9.0178894,
-      "longitude": 126.2335553,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Sumo-sumo",
-      "latitude": 8.977167,
-      "longitude": 126.238405,
-      "hazardLevels": [0, 0, 2, 2, 1]
-    },
-    {
-      "name": "Umbay",
-      "latitude": 8.9867111,
-      "longitude": 126.2361208,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Unaban",
-      "latitude": 8.9949463,
-      "longitude": 126.1889326,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-    {
-      "name": "Unidos",
-      "latitude": 8.9853186,
-      "longitude": 126.2020099,
-      "hazardLevels": [0, 0, 2, 1, 2]
-    },
-    {
-      "name": "Victoria",
-      "latitude": 9.0348458,
-      "longitude": 126.2097035,
-      "hazardLevels": [0, 0, 2, 1, 3]
-    },
-  ];
+  List<Map<String, dynamic>> barangays = [];
 
   HomeController() {
     weatherFactory = WeatherFactory(apiKey);
@@ -176,6 +36,18 @@ class HomeController {
     } catch (e) {
       print('Error loading TensorFlow Lite model: $e');
       throw Exception('Failed to load TensorFlow Lite model.');
+    }
+  }
+
+  Future<void> loadBarangayData() async {
+    try {
+      final String jsonString =
+          await rootBundle.loadString('assets/barangay_hazard_data.json');
+      barangays = List<Map<String, dynamic>>.from(jsonDecode(jsonString));
+      print("Loaded ${barangays.length} barangays from JSON");
+    } catch (e) {
+      print('Error loading barangay data: $e');
+      throw Exception('Failed to load barangay data.');
     }
   }
 
@@ -199,6 +71,7 @@ class HomeController {
       }
 
       print("Fetched weather data for current location successfully.");
+      await loadBarangayData();
       await predictRiskAreas();
       print("Predicted and ranked risk areas successfully.");
     } catch (e) {
@@ -232,70 +105,67 @@ class HomeController {
         print(
             "Weather for ${barangay["name"]}: Temp: $temperature°C, Humidity: $humidity%, Rain Last Hour: $rainLastHour mm");
 
-        if (!barangay.containsKey("hazardLevels") ||
-            !barangay.containsKey("latitude") ||
-            !barangay.containsKey("longitude")) {
-          print("Invalid barangay data for ${barangay["name"]}. Skipping...");
-          continue;
-        }
+        Map<String, double> hazardScores =
+            Map<String, double>.from(barangay["hazardScores"]);
+        Map<String, String> hazardLevels =
+            Map<String, String>.from(barangay["hazardLevels"]);
 
-        List<double> inputData = [
-          ...barangay["hazardLevels"].map((value) => value.toDouble()).toList(),
+        List<double> stormSurgeInput = [
           temperature,
           humidity,
           rainLastHour,
         ];
 
-
-        print("Raw Input Data for ${barangay["name"]}: $inputData");
-
-        var normalizedData = _normalizeInput(inputData);
-        print("Normalized Input Data for ${barangay["name"]}: $normalizedData");
-
-        if (normalizedData.length != 8) {
-          print(
-              "Invalid input data length for ${barangay["name"]}: ${normalizedData.length}. Skipping...");
-          continue;
-        }
-
-        var input = [normalizedData]; // Shape: [1, 8]
-        var output = List.filled(1, List.filled(1, 0.0)); // Shape: [1, 1]
+        var normalizedStormSurgeInput = _normalizeInput(
+            stormSurgeInput, [27.5, 75.0, 0.0], [5.0, 15.0, 1.0]);
+        var input = [normalizedStormSurgeInput];
+        var output = List.filled(1, List.filled(1, 0.0));
 
         try {
           _interpreter!.run(input, output);
-          double hazardScore = output[0][0];
-          String riskLevel = _getRiskLevel(hazardScore);
+          double stormSurgeScore = output[0][0];
+          hazardScores["Storm Surge"] = stormSurgeScore.clamp(1.0, 10.0);
+          hazardLevels["Storm Surge"] =
+              _mapStormSurgeIntensity(stormSurgeScore);
           print(
-              "Hazard Score for ${barangay["name"]}: $hazardScore -> Risk Level: $riskLevel");
-
-          predictedRiskAreas.add(RiskArea(
-            name: barangay["name"],
-            riskLevel: riskLevel,
-            riskColor: _getRiskColor(hazardScore),
-            hazardScore: hazardScore,
-          ));
+              "Storm Surge Score for ${barangay["name"]}: $stormSurgeScore -> Level: ${hazardLevels["Storm Surge"]}");
         } catch (e) {
-          print("Error during model inference for ${barangay["name"]}: $e");
-          predictedRiskAreas.add(RiskArea(
-            name: barangay["name"],
-            riskLevel: "Unknown",
-            riskColor: Colors.grey,
-            hazardScore: 0.0,
-          ));
+          print(
+              "Error during Storm Surge inference for ${barangay["name"]}: $e");
+          hazardScores["Storm Surge"] = 1.0;
+          hazardLevels["Storm Surge"] = "Low";
         }
+
+        double overallHazardScore =
+            hazardScores.values.reduce((a, b) => a + b) / hazardScores.length;
+        String riskLevel = _getRiskLevel(overallHazardScore);
+        print(
+            "Overall Hazard Score for ${barangay["name"]}: $overallHazardScore -> Risk Level: $riskLevel");
+
+        predictedRiskAreas.add(RiskArea(
+          name: barangay["name"],
+          riskLevel: riskLevel,
+          riskColor: _getRiskColor(hazardScore: overallHazardScore),
+          hazardScores: hazardScores,
+          hazardLevels: hazardLevels,
+        ));
       }
 
-      // Sort by hazardScore numerically (high to low)
-      predictedRiskAreas.sort((a, b) => b.hazardScore.compareTo(a.hazardScore));
-      // Store all predicted areas
+      predictedRiskAreas.sort((a, b) {
+        double avgA = a.hazardScores.values.reduce((x, y) => x + y) /
+            a.hazardScores.length;
+        double avgB = b.hazardScores.values.reduce((x, y) => x + y) /
+            b.hazardScores.length;
+        return avgB.compareTo(avgA);
+      });
+
       allRiskAreas = predictedRiskAreas;
-      // Limit to top 3 for HomeScreen
       riskAreas = predictedRiskAreas.take(3).toList();
 
       print(
-          "All Risk Areas: ${allRiskAreas.map((area) => "${area.name} (${area.riskLevel}, Score: ${area.hazardScore})").toList()}");
+          "All Risk Areas: ${allRiskAreas.map((area) => "${area.name} (${area.riskLevel}, Avg Score: ${area.hazardScores.values.reduce((a, b) => a + b) / area.hazardScores.length})").toList()}");
       print(
-          "Top 3 Ranked Risk Areas: ${riskAreas.map((area) => "${area.name} (${area.riskLevel}, Score: ${area.hazardScore})").toList()}");
+          "Top 3 Ranked Risk Areas: ${riskAreas.map((area) => "${area.name} (${area.riskLevel}, Avg Score: ${area.hazardScores.values.reduce((a, b) => a + b) / area.hazardScores.length})").toList()}");
 
       if (allRiskAreas.isEmpty) {
         throw Exception(
@@ -307,22 +177,28 @@ class HomeController {
     }
   }
 
-  List<double> _normalizeInput(List<double> input) {
-    List<double> means = [1.5, 1.5, 2.5, 1.5, 2.0, 27.5, 75.0, 0.0];
-    List<double> stds = [0.5, 0.5, 0.5, 0.5, 0.5, 5.0, 15.0, 1.0];
-    return List.generate(input.length, (i) => (input[i] - means[i]) / stds[i]);
+  List<double> _normalizeInput(
+      List<double> input, List<double> means, List<double> stds) {
+    return List.generate(input.length,
+        (i) => (input[i] - means[i]) / (stds[i] != 0 ? stds[i] : 1));
   }
 
   String _getRiskLevel(double hazardScore) {
-    if (hazardScore >= 14.7) return "High";
-    if (hazardScore >= 12.9 ) return "Medium";
+    if (hazardScore >= 3.5) return "High";
+    if (hazardScore >= 2.5) return "Medium";
     return "Low";
   }
 
-  Color _getRiskColor(double hazardScore) {
-    if (hazardScore >= 14.7) return Colors.red;
-    if (hazardScore >= 12.9 ) return Colors.orange;
+  Color _getRiskColor({required double hazardScore}) {
+    if (hazardScore >= 3.5) return Colors.red;
+    if (hazardScore >= 2.5) return Colors.orange;
     return Colors.green;
+  }
+
+  String _mapStormSurgeIntensity(double score) {
+    if (score < 1.5) return "Low";
+    if (score < 2.5) return "Medium";
+    return "High";
   }
 
   Future<Position> _determinePosition() async {

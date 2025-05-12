@@ -37,6 +37,8 @@ class Language with ChangeNotifier {
       'tsunami': 'Tsunami',
       'landslide': 'Landslide',
       'earthquake': 'Earthquake',
+      'storm_surge': 'Storm Surge',
+      'hazard_rankings': 'Hazard Rankings',
       'no_risk_areas': 'No risk areas available.',
       'see_all': 'See All',
     },
@@ -60,6 +62,8 @@ class Language with ChangeNotifier {
       'tsunami': 'Tsunami',
       'landslide': 'Pagguho ng Lupa',
       'earthquake': 'Lindol',
+      'storm_surge': 'Storm Surge',
+      'hazard_rankings': 'Mga Ranggo ng Panganib',
       'no_risk_areas': 'Walang mga lugar ng panganib na magagamit.',
       'see_all': 'Tingnan Lahat',
     },
@@ -83,6 +87,8 @@ class Language with ChangeNotifier {
       'tsunami': 'Tsunami',
       'landslide': 'Lunop',
       'earthquake': 'Linog',
+      'storm_surge': 'Storm Surge',
+      'hazard_rankings': 'Mga Ranggo sa Delikado',
       'no_risk_areas': 'Walay mga lugar nga delikado nga magamit.',
       'see_all': 'Tan-awa Tanan',
     },
@@ -119,7 +125,28 @@ class Language with ChangeNotifier {
   String get tsunami => _getTranslation('tsunami');
   String get landslide => _getTranslation('landslide');
   String get earthquake => _getTranslation('earthquake');
+  String get stormSurge =>
+      _getTranslation('storm_surge', fallback: 'Storm Surge');
+  String get hazardRankings =>
+      _getTranslation('hazard_rankings', fallback: 'Hazard Rankings');
   String get noRiskAreas =>
       _getTranslation('no_risk_areas', fallback: 'No risk areas available.');
   String get seeAll => _getTranslation('see_all', fallback: 'See All');
+
+  String getHazardLabel(String hazardType) {
+    switch (hazardType) {
+      case 'Earthquake':
+        return earthquake;
+      case 'Flood':
+        return flood;
+      case 'Landslide':
+        return landslide;
+      case 'Storm Surge':
+        return stormSurge;
+      case 'Tsunami':
+        return tsunami;
+      default:
+        return hazardType;
+    }
+  }
 }

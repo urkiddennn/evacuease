@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:evacuease/Controllers/home_controller.dart';
+import 'package:evacuease/Controllers/home_controller.dart' as homeController;
 import 'package:evacuease/Models/home_model.dart';
 import 'package:evacuease/Models/survey_model.dart';
 import '../../../Controllers/language.dart';
@@ -22,6 +22,39 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _errorMessage;
   List<Survey> _surveys = [];
   Timer? _surveyPollingTimer;
+  String _selectedHazardType = 'Earthquake'; // Default hazard type
+
+  // Priority map for hazard levels based on provided mapping functions
+  static const Map<String, int> _hazardLevelPriority = {
+    // Earthquake levels
+    'X - Completely devastating': 10,
+    'IX - Devastating': 9,
+    'VIII - Very destructive': 8,
+    'VII - Destructive': 7,
+    'VI - Very strong': 6,
+    'V - Strong': 5,
+    'IV - Moderately weak': 4,
+    'III - Weak': 3,
+    'II - Slightly felt': 2,
+    'I - Scarcely perceptible': 1,
+    // Flood levels
+    'Red - High': 4,
+    'Red orange - Medium': 3,
+    'Orange - Low': 2,
+    'Yellow - Very Low': 1,
+    // Landslide levels
+    'Red - High Susceptibility': 3,
+    'Violet - Moderate Susceptibility': 2,
+    'Yellow - Low Susceptibility': 1,
+    // Storm Surge levels
+    'High': 3,
+    'Medium': 2,
+    'Low': 1,
+    // Fallback for any unexpected levels
+    'Yellow - High': 3, // From JSON data, treated as Medium/High
+    'Yellow - Medium': 2,
+    'Yellow - Low': 1,
+  };
 
   @override
   void initState() {
@@ -31,17 +64,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initializeApp() async {
-    final controller = Provider.of<HomeController>(context, listen: false);
+    final controller =
+        Provider.of<homeController.HomeController>(context, listen: false);
     try {
       await controller.loadModel();
+      await controller.loadBarangayData();
       await controller.fetchCurrentLocationAndWeather();
-      while (controller.riskAreas.isEmpty) {
+      while (controller.allRiskAreas.isEmpty) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
-      print("App initialized, WeatherData: ${controller.weatherData}");
     } catch (e) {
       _errorMessage = "Failed to load data: $e";
-      print("Error in _initializeApp: $e");
     } finally {
       setState(() {
         _isLoading = false;
@@ -49,92 +82,55 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Fetch surveys from the API
   Future<void> _fetchSurveys() async {
     try {
       final response = await http
           .get(Uri.parse('https://admin-evacu-ease.vercel.app/api/survey'));
-      print("Survey API Status Code: ${response.statusCode}");
-      print("Survey API Response Body: ${response.body}");
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        print("Parsed API Response: $jsonResponse");
-
         if (jsonResponse['success'] == true &&
             jsonResponse.containsKey('data')) {
           final List<dynamic> data = jsonResponse['data'];
           final newSurveys = data.map((json) => Survey.fromJson(json)).toList();
 
-          // Sort by createdAt descending (newest first)
           newSurveys.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          print(
-              "New Surveys Fetched (sorted): ${newSurveys.map((s) => "${s.title} (${s.createdAt.toIso8601String()})").toList()}");
-          print(
-              "Existing Surveys: ${_surveys.map((s) => "${s.title} (${s.createdAt.toIso8601String()})").toList()}");
-
           if (newSurveys.isNotEmpty && _surveys.isNotEmpty) {
-            // Skip popup on initial load
             final latestSurvey = newSurveys.first;
             final previousLatest = _surveys.first;
-            print(
-                "Comparing Latest: ${latestSurvey.title} (${latestSurvey.createdAt.toIso8601String()}) vs Previous: ${previousLatest.title} (${previousLatest.createdAt.toIso8601String()})");
             if (latestSurvey.createdAt.isAfter(previousLatest.createdAt)) {
-              print(
-                  "New survey detected, showing popup for: ${latestSurvey.title}");
               _showSurveyPopup(latestSurvey);
-            } else {
-              print("No newer survey found.");
             }
           }
 
           setState(() {
             _surveys = newSurveys;
-            print("Updated _surveys length: ${_surveys.length}");
           });
-        } else {
-          print("API response invalid: missing 'success' or 'data'");
         }
-      } else {
-        print(
-            "Failed to fetch surveys: ${response.statusCode}, Body: ${response.body}");
       }
     } catch (e) {
-      print("Error fetching surveys: $e");
+      // Handle error silently
     }
   }
 
-  // Poll for surveys every 1 minute
   void _startSurveyPolling() {
-    _fetchSurveys(); // Initial fetch to populate _surveys, no popup
+    _fetchSurveys();
     _surveyPollingTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      print("Polling surveys at ${DateTime.now()}");
       _fetchSurveys();
     });
   }
 
   void _launchURL(String url) async {
-    print("Attempting to launch URL: $url");
-    if (url.isEmpty) {
-      print("URL is empty");
-      return;
-    }
-
-    if (await canLaunch(url)) {
-      print("URL can be launched");
-      await launch(url);
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     } else {
-      print("Cannot launch URL: $url");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Could not launch URL")),
       );
     }
   }
 
-  // Show survey popup
   void _showSurveyPopup(Survey survey) {
-    print(
-        "Showing popup for survey: ${survey.title}, CreatedAt: ${survey.createdAt}");
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -228,9 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final language = Provider.of<Language>(context);
-    final controller = Provider.of<HomeController>(context);
-    print(
-        "Risk Areas in UI: ${controller.riskAreas.map((area) => area.name).toList()}");
+    final controller = Provider.of<homeController.HomeController>(context);
     return SafeArea(
       child: Scaffold(
         body: SingleChildScrollView(
@@ -256,9 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Weather Info Section
   Widget _buildWeatherInfoSection(BuildContext context) {
-    final controller = Provider.of<HomeController>(context);
-    print(
-        "Building weather section, _isLoading: $_isLoading, WeatherData: ${controller.weatherData}");
+    final controller = Provider.of<homeController.HomeController>(context);
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(
@@ -310,7 +302,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     weatherData.location,
                     style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
@@ -323,15 +317,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               weatherData.weatherCondition,
                               style: const TextStyle(
-                                  fontSize: 14, color: Colors.grey),
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               '${weatherData.temperature?.toStringAsFixed(1) ?? "--"} °C',
                               style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey),
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -356,8 +353,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return _errorMessage != null
         ? Center(
-            child: Text(_errorMessage!,
-                style: const TextStyle(color: Colors.red, fontSize: 16)))
+            child: Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red, fontSize: 16),
+            ),
+          )
         : _buildWeatherSkeleton(context);
   }
 
@@ -373,9 +373,10 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                  width: MediaQuery.of(context).size.width * 0.4,
-                  height: 22,
-                  color: Colors.grey[300]),
+                width: MediaQuery.of(context).size.width * 0.4,
+                height: 22,
+                color: Colors.grey[300],
+              ),
               const SizedBox(height: 4),
               Row(
                 children: [
@@ -383,18 +384,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                          width: MediaQuery.of(context).size.width * 0.2,
-                          height: 14,
-                          color: Colors.grey[300]),
+                        width: MediaQuery.of(context).size.width * 0.2,
+                        height: 14,
+                        color: Colors.grey[300],
+                      ),
                       const SizedBox(height: 8),
                       Container(
-                          width: MediaQuery.of(context).size.width * 0.25,
-                          height: 26,
-                          color: Colors.grey[300]),
+                        width: MediaQuery.of(context).size.width * 0.25,
+                        height: 26,
+                        color: Colors.grey[300],
+                      ),
                     ],
                   ),
                   const SizedBox(width: 10),
-                  Container(width: 50, height: 50, color: Colors.grey[300]),
+                  Container(
+                    width: 50,
+                    height: 50,
+                    color: Colors.grey[300],
+                  ),
                 ],
               ),
             ],
@@ -407,9 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Starter Section
   Widget _buildStarterSection(BuildContext context) {
     final language = Provider.of<Language>(context);
-    const String starterUrl =
-        'https://www.facebook.com/share/v/1AW5vij63S/'; // Provided Facebook link
-
+    const String starterUrl = 'https://www.facebook.com/share/v/1AW5vij63S/';
     return GestureDetector(
       onTap: () => _launchURL(starterUrl),
       child: Container(
@@ -444,7 +449,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       language.starter,
                       style: const TextStyle(
-                          fontSize: 30, fontWeight: FontWeight.bold),
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
@@ -455,7 +462,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_right, size: 50),
+              const Icon(
+                Icons.arrow_right,
+                size: 50,
+              ),
             ],
           ),
         ),
@@ -466,7 +476,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // Risk Areas Section
   Widget _buildRiskAreaSection(BuildContext context) {
     final language = Provider.of<Language>(context);
-    final controller = Provider.of<HomeController>(context);
+    final controller = Provider.of<homeController.HomeController>(context);
+
     if (_isLoading) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,13 +485,18 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(language.riskArea,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.w600)),
+              Text(
+                language.riskArea,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              ),
               TextButton(
-                  onPressed: null,
-                  child: Text(language.seeAll,
-                      style: const TextStyle(color: Colors.grey))),
+                onPressed: null, // Disabled during loading
+                child: Text(
+                  language.seeAll,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 15),
@@ -489,33 +505,84 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       );
     }
+
     if (_errorMessage != null) {
       return Center(
-          child: Text(_errorMessage!,
-              style: const TextStyle(color: Colors.red, fontSize: 16)));
+        child: Text(
+          _errorMessage!,
+          style: const TextStyle(color: Colors.red, fontSize: 16),
+        ),
+      );
     }
-    if (controller.riskAreas.isEmpty) {
-      return Text(language.noRiskAreas,
-          style: const TextStyle(fontSize: 16, color: Colors.grey));
+
+    if (controller.allRiskAreas.isEmpty) {
+      return Text(
+        language.noRiskAreas,
+        style: const TextStyle(fontSize: 16, color: Colors.grey),
+      );
     }
+
+    // Sort barangays by hazard level priority, then by hazard score
+    List<RiskArea> sortedAreas = List.from(controller.allRiskAreas)
+      ..sort((a, b) {
+        // Get hazard levels
+        String levelA = a.hazardLevels[_selectedHazardType] ?? 'Low';
+        String levelB = b.hazardLevels[_selectedHazardType] ?? 'Low';
+
+        // Get priority for levels, default to 0 if not found
+        int priorityA = _hazardLevelPriority[levelA] ?? 0;
+        int priorityB = _hazardLevelPriority[levelB] ?? 0;
+
+        // Compare priorities (descending: higher priority first)
+        int priorityComparison = priorityB.compareTo(priorityA);
+        if (priorityComparison != 0) {
+          return priorityComparison;
+        }
+
+        // If priorities are equal, compare scores (descending: higher score first)
+        double scoreA = a.hazardScores[_selectedHazardType] ?? 0.0;
+        double scoreB = b.hazardScores[_selectedHazardType] ?? 0.0;
+        return scoreB.compareTo(scoreA);
+      });
 
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(language.riskArea,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            Text(
+              language.riskArea,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
             TextButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, RouteNames.riskArea),
-                child: Text(language.seeAll,
-                    style: const TextStyle(color: Colors.blue))),
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  RouteNames.riskArea,
+                  arguments: _selectedHazardType,
+                );
+              },
+              child: Text(
+                language.seeAll,
+                style: const TextStyle(color: Colors.blue),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 15),
-        ...controller.riskAreas
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.start,
+          children: [
+            _buildHazardButton(context, language.earthquake, 'Earthquake'),
+            _buildHazardButton(context, language.flood, 'Flood'),
+            _buildHazardButton(context, language.landslide, 'Landslide'),
+            _buildHazardButton(context, language.stormSurge, 'Storm Surge'),
+          ],
+        ),
+        const SizedBox(height: 15),
+        ...sortedAreas
             .take(5)
             .map((area) => _buildRiskAreaItem(context, area))
             .toList(),
@@ -529,31 +596,36 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       height: MediaQuery.of(context).size.height * 0.1,
       decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0))),
+        border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
           children: [
             Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(50),
-                    color: Colors.grey[300])),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(50),
+                color: Colors.grey[300],
+              ),
+            ),
             const SizedBox(width: 15),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                    width: MediaQuery.of(context).size.width * 0.3,
-                    height: 20,
-                    color: Colors.grey[300]),
+                  width: MediaQuery.of(context).size.width * 0.3,
+                  height: 20,
+                  color: Colors.grey[300],
+                ),
                 const SizedBox(height: 8),
                 Container(
-                    width: MediaQuery.of(context).size.width * 0.2,
-                    height: 15,
-                    color: Colors.grey[300]),
+                  width: MediaQuery.of(context).size.width * 0.2,
+                  height: 15,
+                  color: Colors.grey[300],
+                ),
               ],
             ),
           ],
@@ -563,37 +635,74 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRiskAreaItem(BuildContext context, RiskArea area) {
+    final level = area.hazardLevels[_selectedHazardType] ?? 'Unknown';
+    Color riskColor;
+    if (level.contains('High') ||
+        level.contains('Red') ||
+        level.contains('VI') ||
+        level.contains('VII') ||
+        level.contains('VIII') ||
+        level.contains('IX') ||
+        level.contains('X')) {
+      riskColor = Colors.red;
+    } else if (level.contains('Medium') ||
+        level.contains('Moderate') ||
+        level.contains('Orange') ||
+        level.contains('Violet') ||
+        level.contains('V')) {
+      riskColor = Colors.orange;
+    } else if (level.contains('Low') ||
+        level.contains('Yellow') ||
+        level.contains('I') ||
+        level.contains('II') ||
+        level.contains('III') ||
+        level.contains('IV')) {
+      riskColor = Colors.green;
+    } else {
+      riskColor = Colors.grey;
+    }
+
     return Container(
       width: double.infinity,
       height: MediaQuery.of(context).size.height * 0.1,
       decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0))),
+        border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
           children: [
             Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(50),
-                    color: area.riskColor)),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(50),
+                color: riskColor,
+              ),
+            ),
             const SizedBox(width: 15),
             Flexible(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(area.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 20),
-                      overflow: TextOverflow.ellipsis),
-                  Text(area.riskLevel,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: Colors.grey),
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    area.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    level,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.grey,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
@@ -611,9 +720,10 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Align(
           alignment: Alignment.centerLeft,
-          child: Text(language.offlineRiskMap,
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+          child: Text(
+            language.offlineRiskMap,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
         ),
         const SizedBox(height: 15),
         Center(
@@ -643,21 +753,31 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCategoryButton(BuildContext context, String label,
       String assetPath, String mapImagePath) {
     return GestureDetector(
-      onTap: () => _showFullMap(context, mapImagePath, label),
+      onTap: () {
+        _showFullMap(context, mapImagePath, label);
+      },
       child: Container(
         width: MediaQuery.of(context).size.width * 0.18,
         height: MediaQuery.of(context).size.width * 0.18,
         decoration: BoxDecoration(
-            border: Border.all(color: Colors.red),
-            borderRadius: BorderRadius.circular(15)),
+          border: Border.all(color: Colors.red),
+          borderRadius: BorderRadius.circular(15),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Image.asset(assetPath, width: 30, height: 30, fit: BoxFit.contain),
-            Text(label,
-                style: TextStyle(color: Colors.red[500], fontSize: 12),
-                overflow: TextOverflow.ellipsis),
+            Image.asset(
+              assetPath,
+              width: 30,
+              height: 30,
+              fit: BoxFit.contain,
+            ),
+            Text(
+              label,
+              style: TextStyle(color: Colors.red[500], fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -687,31 +807,70 @@ class _HomeScreenState extends State<HomeScreen> {
                       fit: BoxFit.contain,
                       scale: 1.2,
                       errorBuilder: (context, error, stackTrace) {
-                        return const Text("Error loading map image",
-                            style: TextStyle(color: Colors.white));
+                        return const Text(
+                          "Error loading map image",
+                          style: TextStyle(color: Colors.white),
+                        );
                       },
                     ),
                   ),
                 ),
               ),
               Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Text(title,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold))),
+                top: 10,
+                left: 10,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               Positioned(
-                  top: 10,
-                  right: 10,
-                  child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.pop(context))),
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildHazardButton(
+      BuildContext context, String label, String hazardType) {
+    bool isSelected = _selectedHazardType == hazardType;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedHazardType = hazardType;
+        });
+      },
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.4,
+        height: 40,
+        decoration: BoxDecoration(
+          border: Border.all(color: isSelected ? Colors.red : Colors.grey),
+          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? Colors.red.withOpacity(0.1) : Colors.white,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.red : Colors.grey,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }

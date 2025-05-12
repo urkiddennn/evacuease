@@ -18,12 +18,14 @@ class RiskArea {
   final String name;
   final String riskLevel;
   final Color riskColor;
-  final double hazardScore; // Added to store raw score
+  final Map<String, double> hazardScores;
+  final Map<String, String> hazardLevels;
 
   RiskArea({
     required this.name,
     required this.riskLevel,
     required this.riskColor,
-    required this.hazardScore,
+    required this.hazardScores,
+    required this.hazardLevels,
   });
 }

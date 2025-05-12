@@ -47,6 +47,7 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/model.tflite
+    - assets/barangay_hazard_data.json
 
 icons_launcher:
   image_path: "assets/icons/logo.png"
