@@ -31,6 +31,7 @@ class _LocationScreenState extends State<LocationScreen>
   String? _selectedHazardType;
   late Timer _locationRefreshTimer;
   bool _isNavigating = false;
+  bool _hasArrived = false;
 
   static const String mapboxAccessToken =
       "pk.eyJ1IjoidXJraWRkZW4iLCJhIjoiY20zdG9sdWdoMGJlODJscTJuZ2sxcWM0ayJ9.F3FIfrwfoq-Xl5aWMiXM9w";
@@ -49,13 +50,20 @@ class _LocationScreenState extends State<LocationScreen>
         _handleEmergencyRoute();
       });
     }
+    // Listen for arrival updates from controller
+    _controller.onArrival = () {
+      if (mounted) {
+        setState(() {
+          _hasArrived = true;
+        });
+      }
+    };
   }
 
   void _initializeLocationAndMap() async {
     setState(() => _controller.isLoading = true);
 
     try {
-      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +76,6 @@ class _LocationScreenState extends State<LocationScreen>
         return;
       }
 
-      // Check and request location permissions
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -91,7 +98,6 @@ class _LocationScreenState extends State<LocationScreen>
         return;
       }
 
-      // Fetch current location
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 10), onTimeout: () {
@@ -183,21 +189,14 @@ class _LocationScreenState extends State<LocationScreen>
         }
       }, hazardType: _selectedHazardType);
 
-      if (_controller.routePoints.length < 2) {
+      if (_controller.nearestLocations.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Route is too short to display.")),
+          const SnackBar(content: Text("No suitable evacuation sites found.")),
         );
-      } else if (_controller.nearestLocation == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No suitable evacuation site found.")),
-        );
-      } else {
-        setState(() {
-          _isNavigating = true;
-        });
-        _mapController.move(_controller.currentLocation!, 17.0);
-        _updateMapRotation();
+        return;
       }
+
+      _showNearestLocationsDialog();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error finding route: $e")),
@@ -233,9 +232,12 @@ class _LocationScreenState extends State<LocationScreen>
         print("App exited, capacity reset for location: $locationId");
         setState(() {
           _isNavigating = false;
+          _hasArrived = false;
           _controller.routePoints.clear();
           _controller.nearestLocation = null;
           _controller.nearestLocationLatLng = null;
+          _controller.nearestLocations.clear();
+          _controller.nearestLocationsLatLng.clear();
         });
       }
     }
@@ -263,6 +265,191 @@ class _LocationScreenState extends State<LocationScreen>
     );
   }
 
+  void _showNearestLocationsDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Nearest Evacuation Sites",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Select a safe location to navigate to:",
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: _controller.nearestLocations.length,
+                  itemBuilder: (context, index) {
+                    final location = _controller.nearestLocations[index];
+                    final locModel = _controller.locations
+                        .firstWhere((loc) => loc.id == location['id']);
+                    final distance = Geolocator.distanceBetween(
+                          _controller.currentLocation!.latitude,
+                          _controller.currentLocation!.longitude,
+                          locModel.lat,
+                          locModel.lng,
+                        ) /
+                        1000; // Convert to kilometers
+                    return Card(
+                      elevation: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.location_on,
+                                    color: Colors.green, size: 24),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    location['location_name']!,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Distance: ${distance.toStringAsFixed(2)} km",
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.grey),
+                            ),
+                            Text(
+                              "Capacity: ${location['capacity']}/${locModel.actualCapacity}",
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.grey),
+                            ),
+                            Text(
+                              "Hazard Type: ${location['hazard_type']}",
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              location['details']!.length > 100
+                                  ? "${location['details']!.substring(0, 100)}..."
+                                  : location['details']!,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                  _controller.nearestLocation = location;
+                                  _controller.nearestLocationLatLng = LatLng(
+                                      double.parse(
+                                          location['location']!.split(',')[0]),
+                                      double.parse(
+                                          location['location']!.split(',')[1]));
+                                  _controller.currentLocationId =
+                                      location['id'];
+                                  try {
+                                    await _controller.fetchRoute((isLoading) {
+                                      setState(() {
+                                        _controller.isLoading = isLoading;
+                                      });
+                                    });
+                                    if (_controller.routePoints.length < 2) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                "Route is too short to display.")),
+                                      );
+                                    } else {
+                                      setState(() {
+                                        _isNavigating = true;
+                                        _hasArrived = false;
+                                      });
+                                      _mapController.move(
+                                          _controller.currentLocation!, 17.0);
+                                      _updateMapRotation();
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text("Error fetching route: $e")),
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red[400],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Select",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text("Close"),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _stopNavigation() {
     if (_controller.nearestLocationLatLng != null &&
         _controller.currentLocationId != null) {
@@ -270,9 +457,12 @@ class _LocationScreenState extends State<LocationScreen>
     }
     setState(() {
       _isNavigating = false;
+      _hasArrived = false;
       _controller.routePoints.clear();
       _controller.nearestLocation = null;
       _controller.nearestLocationLatLng = null;
+      _controller.nearestLocations.clear();
+      _controller.nearestLocationsLatLng.clear();
       _controller.currentFamilySize = null;
       _controller.currentLocationId = null;
     });
@@ -285,9 +475,12 @@ class _LocationScreenState extends State<LocationScreen>
     }
     setState(() {
       _isNavigating = false;
+      _hasArrived = false;
       _controller.routePoints.clear();
       _controller.nearestLocation = null;
       _controller.nearestLocationLatLng = null;
+      _controller.nearestLocations.clear();
+      _controller.nearestLocationsLatLng.clear();
       _controller.currentFamilySize = null;
       _controller.currentLocationId = null;
     });
@@ -307,9 +500,12 @@ class _LocationScreenState extends State<LocationScreen>
     }
     setState(() {
       _isNavigating = false;
+      _hasArrived = false;
       _controller.routePoints.clear();
       _controller.nearestLocation = null;
       _controller.nearestLocationLatLng = null;
+      _controller.nearestLocations.clear();
+      _controller.nearestLocationsLatLng.clear();
       _controller.currentFamilySize = null;
       _controller.currentLocationId = null;
     });
@@ -357,6 +553,12 @@ class _LocationScreenState extends State<LocationScreen>
                             color: Colors.blue, size: 50),
                       ),
                     ..._getFilteredLocations().map((location) {
+                      bool isSelected = _isNavigating &&
+                          _controller.nearestLocationLatLng != null &&
+                          location.lat ==
+                              _controller.nearestLocationLatLng!.latitude &&
+                          location.lng ==
+                              _controller.nearestLocationLatLng!.longitude;
                       return Marker(
                         point: LatLng(location.lat, location.lng),
                         width: 100,
@@ -398,8 +600,11 @@ class _LocationScreenState extends State<LocationScreen>
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Icon(Icons.location_on,
-                                  color: Colors.green, size: 40),
+                              Icon(
+                                Icons.location_on,
+                                color: isSelected ? Colors.red : Colors.green,
+                                size: 40,
+                              ),
                             ],
                           ),
                         ),
@@ -529,17 +734,18 @@ class _LocationScreenState extends State<LocationScreen>
                   child: const Icon(Icons.cancel, color: Colors.white),
                 ),
               ),
-              Positioned(
-                bottom: 145,
-                left: 20,
-                child: FloatingActionButton(
-                  onPressed: _completeNavigation,
-                  backgroundColor: Colors.blue,
-                  child: const Icon(Icons.check, color: Colors.white),
+              if (_hasArrived)
+                Positioned(
+                  bottom: 145,
+                  left: 20,
+                  child: FloatingActionButton(
+                    onPressed: _completeNavigation,
+                    backgroundColor: Colors.blue,
+                    child: const Icon(Icons.check, color: Colors.white),
+                  ),
                 ),
-              ),
               Positioned(
-                bottom: 210,
+                bottom: _hasArrived ? 210 : 145,
                 left: 20,
                 child: FloatingActionButton(
                   onPressed: _stopNavigation,
@@ -578,8 +784,11 @@ class _LocationScreenState extends State<LocationScreen>
           _selectedHazardType = isClear ? null : type;
           _controller.routePoints.clear();
           _isNavigating = false;
+          _hasArrived = false;
           _controller.nearestLocation = null;
           _controller.nearestLocationLatLng = null;
+          _controller.nearestLocations.clear();
+          _controller.nearestLocationsLatLng.clear();
         });
       },
       child: Container(
@@ -811,6 +1020,7 @@ class _LocationScreenState extends State<LocationScreen>
                       } else {
                         setState(() {
                           _isNavigating = true;
+                          _hasArrived = false;
                         });
                         _mapController.move(_controller.currentLocation!, 17.0);
                         _updateMapRotation();

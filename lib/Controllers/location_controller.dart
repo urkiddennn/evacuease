@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import "package:latlong2/latlong.dart";
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart';
 import '../Models/location_model.dart';
+import 'package:vector_math/vector_math.dart';
 
 class LocationController {
   LatLng? currentLocation;
@@ -15,13 +17,16 @@ class LocationController {
   bool isLoading = false;
   Map<String, String>? nearestLocation;
   LatLng? nearestLocationLatLng;
+  List<Map<String, String>> nearestLocations = [];
+  List<LatLng> nearestLocationsLatLng = [];
   StreamSubscription? compassSubscription;
   StreamSubscription<Position>? positionSubscription;
   String? _currentPlaceName;
+  VoidCallback? onArrival; // Callback for arrival notification
 
   List<LocationModel> locations = [];
-  int? currentFamilySize; // Track the family size for the current route
-  String? currentLocationId; // Track the current evacuation site ID
+  int? currentFamilySize;
+  String? currentLocationId;
 
   String? get currentLocationName => _currentPlaceName;
 
@@ -144,30 +149,43 @@ class LocationController {
       return distance.as(LengthUnit.Meter, a, b);
     }
 
-    double? shortestDistance;
-    LocationModel? nearest;
-
-    for (var location in locations) {
+    List<Map<String, dynamic>> locationsWithDistance =
+        locations.map((location) {
       final distance = calculateDistance(
           currentLocation!, LatLng(location.lat, location.lng));
-
-      if (shortestDistance == null || distance < shortestDistance) {
-        shortestDistance = distance;
-        nearest = location;
-      }
-    }
-
-    if (nearest != null) {
-      nearestLocation = {
-        'location': '${nearest.lat},${nearest.lng}',
-        'location_name': nearest.name,
-        'details': nearest.description,
-        'image_url': nearest.images.isNotEmpty ? nearest.images.first : '',
-        'travel_time': 'Unknown',
+      return {
+        'location': location,
+        'distance': distance,
       };
-      nearestLocationLatLng = LatLng(nearest.lat, nearest.lng);
-      print("Nearest location: ${nearestLocation!['location_name']}");
+    }).toList();
+
+    locationsWithDistance
+        .sort((a, b) => a['distance'].compareTo(b['distance']));
+
+    nearestLocations.clear();
+    nearestLocationsLatLng.clear();
+    for (var item in locationsWithDistance.take(4)) {
+      LocationModel location = item['location'];
+      nearestLocations.add({
+        'location': '${location.lat},${location.lng}',
+        'location_name': location.name,
+        'details': location.description,
+        'image_url': location.images.isNotEmpty ? location.images.first : '',
+        'travel_time': 'Unknown',
+        'id': location.id,
+        'capacity': location.capacity.toString(),
+        'hazard_type': location.hazardType,
+      });
+      nearestLocationsLatLng.add(LatLng(location.lat, location.lng));
     }
+
+    if (nearestLocations.isNotEmpty) {
+      nearestLocation = nearestLocations.first;
+      nearestLocationLatLng = nearestLocationsLatLng.first;
+      currentLocationId = nearestLocations.first['id'];
+    }
+
+    print("Nearest locations found: ${nearestLocations.length}");
   }
 
   Future<void> fetchRoute(void Function(bool) onLoadingChanged) async {
@@ -217,8 +235,7 @@ class LocationController {
   }
 
   Future<void> fetchRouteWithCapacity(
-      int familySize,
-      void Function(bool) onLoadingChanged,
+      int familySize, void Function(bool) onLoadingChanged,
       {String? hazardType}) async {
     if (currentLocation == null || locations.isEmpty) {
       throw Exception("Current location or locations list not available.");
@@ -226,8 +243,9 @@ class LocationController {
 
     onLoadingChanged(true);
 
-    // Clear previous route data
     routePoints.clear();
+    nearestLocations.clear();
+    nearestLocationsLatLng.clear();
     nearestLocation = null;
     nearestLocationLatLng = null;
 
@@ -236,51 +254,62 @@ class LocationController {
       return distance.as(LengthUnit.Meter, a, b);
     }
 
-    LocationModel? suitableLocation;
-    double? shortestDistance;
+    var filteredLocations = locations.where((location) {
+      bool matchesHazard =
+          hazardType == null || location.hazardType == hazardType;
+      bool hasCapacity = location.capacity >= familySize;
+      return matchesHazard && hasCapacity;
+    }).toList();
 
-    // Filter locations based on hazardType if provided
-    var filteredLocations = hazardType != null
-        ? locations.where((loc) => loc.hazardType == hazardType).toList()
-        : locations;
-
-    // Find nearest location with sufficient capacity
-    for (var location in filteredLocations) {
-      final distance = calculateDistance(
-          currentLocation!, LatLng(location.lat, location.lng));
-      if (location.capacity >= familySize &&
-          (shortestDistance == null || distance < shortestDistance)) {
-        shortestDistance = distance;
-        suitableLocation = location;
-      }
-    }
-
-    if (suitableLocation == null) {
+    if (filteredLocations.isEmpty) {
       onLoadingChanged(false);
       throw Exception(
           "No evacuation site with sufficient capacity found for ${hazardType ?? 'any'} hazard.");
     }
 
-    nearestLocation = {
-      'location': '${suitableLocation.lat},${suitableLocation.lng}',
-      'location_name': suitableLocation.name,
-      'details': suitableLocation.description,
-      'image_url':
-          suitableLocation.images.isNotEmpty ? suitableLocation.images.first : '',
-      'travel_time': 'Unknown',
-    };
-    nearestLocationLatLng = LatLng(suitableLocation.lat, suitableLocation.lng);
+    List<Map<String, dynamic>> locationsWithDistance =
+        filteredLocations.map((location) {
+      final distance = calculateDistance(
+          currentLocation!, LatLng(location.lat, location.lng));
+      return {
+        'location': location,
+        'distance': distance,
+      };
+    }).toList();
 
-    // Store family size and location ID
+    locationsWithDistance
+        .sort((a, b) => a['distance'].compareTo(b['distance']));
+
+    for (var item in locationsWithDistance.take(4)) {
+      LocationModel location = item['location'];
+      nearestLocations.add({
+        'location': '${location.lat},${location.lng}',
+        'location_name': location.name,
+        'details': location.description,
+        'image_url': location.images.isNotEmpty ? location.images.first : '',
+        'travel_time': 'Unknown',
+        'id': location.id,
+        'capacity': location.capacity.toString(),
+        'hazard_type': location.hazardType,
+      });
+      nearestLocationsLatLng.add(LatLng(location.lat, location.lng));
+    }
+
+    if (nearestLocations.isEmpty) {
+      onLoadingChanged(false);
+      throw Exception("No suitable evacuation sites found.");
+    }
+
+    LocationModel suitableLocation = locationsWithDistance.first['location'];
+    nearestLocation = nearestLocations.first;
+    nearestLocationLatLng = nearestLocationsLatLng.first;
     currentFamilySize = familySize;
     currentLocationId = suitableLocation.id;
 
-    // Calculate new capacity (only update capacity, not actualCapacity)
     final newCapacity = suitableLocation.capacity - familySize;
     print(
         "Before update - Location: ${suitableLocation.name}, Capacity: ${suitableLocation.capacity}, Actual Capacity: ${suitableLocation.actualCapacity}, Family Size: $familySize, New Capacity: $newCapacity");
 
-    // Update only capacity on server
     await _updateCapacity(suitableLocation.id, newCapacity);
 
     const apiKey = "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed";
@@ -305,7 +334,6 @@ class LocationController {
               .toList();
           print("Route points fetched: ${routePoints.length}");
 
-          // Start monitoring arrival
           _monitorArrival();
         } else {
           throw Exception("No route found in response.");
@@ -315,8 +343,8 @@ class LocationController {
             "Failed to fetch route: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      // Revert capacity on failure to original capacity (not actualCapacity)
-      await _updateCapacity(suitableLocation.id, suitableLocation.actualCapacity);
+      await _updateCapacity(
+          suitableLocation.id, suitableLocation.actualCapacity);
       print("Error fetching route with capacity: $e");
       throw Exception("Error fetching route: $e");
     } finally {
@@ -326,7 +354,7 @@ class LocationController {
 
   Future<void> _updateCapacity(String locationId, int newCapacity) async {
     final location = locations.firstWhere((loc) => loc.id == locationId);
-    final oldCapacity = location.capacity; // Store old capacity for rollback
+    final oldCapacity = location.capacity;
     try {
       final response = await http.put(
         Uri.parse(
@@ -338,12 +366,13 @@ class LocationController {
           "Update capacity response: ${response.statusCode}, Body: ${response.body}");
       if (response.statusCode == 200) {
         location.capacity = newCapacity;
-        print("Capacity updated for $locationId: $newCapacity (Actual Capacity remains ${location.actualCapacity})");
+        print(
+            "Capacity updated for $locationId: $newCapacity (Actual Capacity remains ${location.actualCapacity})");
       } else {
         throw Exception("Failed to update capacity: ${response.statusCode}");
       }
     } catch (e) {
-      location.capacity = oldCapacity; // Rollback on failure
+      location.capacity = oldCapacity;
       print("Error updating capacity: $e");
       throw e;
     }
@@ -356,13 +385,15 @@ class LocationController {
   }
 
   void _monitorArrival() {
-    if (nearestLocationLatLng == null || currentFamilySize == null || currentLocationId == null) return;
+    if (nearestLocationLatLng == null ||
+        currentFamilySize == null ||
+        currentLocationId == null) return;
 
-    positionSubscription?.cancel(); // Cancel any existing subscription
+    positionSubscription?.cancel();
     positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 5, // Update every 5 meters
+        distanceFilter: 5,
       ),
     ).listen((Position position) {
       currentLocation = LatLng(position.latitude, position.longitude);
@@ -375,7 +406,7 @@ class LocationController {
 
       print("Distance to destination: $distance meters");
 
-      if (distance <= 20) { // User is within 20 meters of the destination
+      if (distance <= 20) {
         _onArrival();
       }
     });
@@ -383,14 +414,18 @@ class LocationController {
 
   Future<void> _onArrival() async {
     if (currentLocationId != null && currentFamilySize != null) {
-      final location = locations.firstWhere((loc) => loc.id == currentLocationId!);
-      print("User arrived at ${location.name}, capacity remains ${location.capacity} until 'Done' is pressed");
-      positionSubscription?.cancel(); // Stop monitoring
+      final location =
+          locations.firstWhere((loc) => loc.id == currentLocationId!);
+      print(
+          "User arrived at ${location.name}, capacity remains ${location.capacity} until 'Done' is pressed");
+      positionSubscription?.cancel();
+      onArrival?.call(); // Notify arrival
     }
   }
 
   void dispose() {
     compassSubscription?.cancel();
     positionSubscription?.cancel();
+    onArrival = null;
   }
 }
