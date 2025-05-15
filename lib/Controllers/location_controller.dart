@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
-import "package:latlong2/latlong.dart";
+import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart';
 import '../Models/location_model.dart';
@@ -22,11 +22,13 @@ class LocationController {
   StreamSubscription? compassSubscription;
   StreamSubscription<Position>? positionSubscription;
   String? _currentPlaceName;
-  VoidCallback? onArrival; // Callback for arrival notification
+  VoidCallback? onArrival;
 
   List<LocationModel> locations = [];
   int? currentFamilySize;
   String? currentLocationId;
+
+  Timer? _debounceTimer;
 
   String? get currentLocationName => _currentPlaceName;
 
@@ -70,7 +72,7 @@ class LocationController {
       currentLocation = LatLng(position.latitude, position.longitude);
       print("Current location: $currentLocation");
 
-      await _updateCurrentPlaceName();
+      await updateCurrentPlaceName();
       onLoadingChanged(false);
     } catch (e) {
       print("Error getting location: $e");
@@ -80,7 +82,7 @@ class LocationController {
     }
   }
 
-  Future<void> _updateCurrentPlaceName() async {
+  Future<void> updateCurrentPlaceName() async {
     if (currentLocation == null) return;
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -115,7 +117,7 @@ class LocationController {
   Future<void> fetchLocations(void Function(bool) onLoadingChanged) async {
     onLoadingChanged(true);
     try {
-      final response = await http.get(
+      final response = await _httpGetWithRetry(
         Uri.parse("https://admin-evacu-ease.vercel.app/api/locations"),
       );
       print("Fetch locations response: ${response.statusCode}");
@@ -153,10 +155,7 @@ class LocationController {
         locations.map((location) {
       final distance = calculateDistance(
           currentLocation!, LatLng(location.lat, location.lng));
-      return {
-        'location': location,
-        'distance': distance,
-      };
+      return {'location': location, 'distance': distance};
     }).toList();
 
     locationsWithDistance
@@ -193,6 +192,15 @@ class LocationController {
       throw Exception("Current or nearest location not available.");
     }
 
+    // Skip fetching if route is already valid
+    if (routePoints.isNotEmpty &&
+        nearestLocationLatLng != null &&
+        routePoints.last.latitude == nearestLocationLatLng!.latitude &&
+        routePoints.last.longitude == nearestLocationLatLng!.longitude) {
+      print("Route already valid, skipping fetch");
+      return;
+    }
+
     onLoadingChanged(true);
 
     const apiKey = "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed";
@@ -206,7 +214,7 @@ class LocationController {
       final url =
           "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$start&end=$end";
       print("Fetching route from: $url");
-      final response = await http.get(Uri.parse(url));
+      final response = await _httpGetWithRetry(Uri.parse(url));
 
       print("Route response status: ${response.statusCode}");
       print("Route response body: ${response.body}");
@@ -271,10 +279,7 @@ class LocationController {
         filteredLocations.map((location) {
       final distance = calculateDistance(
           currentLocation!, LatLng(location.lat, location.lng));
-      return {
-        'location': location,
-        'distance': distance,
-      };
+      return {'location': location, 'distance': distance};
     }).toList();
 
     locationsWithDistance
@@ -310,7 +315,7 @@ class LocationController {
     print(
         "Before update - Location: ${suitableLocation.name}, Capacity: ${suitableLocation.capacity}, Actual Capacity: ${suitableLocation.actualCapacity}, Family Size: $familySize, New Capacity: $newCapacity");
 
-    await _updateCapacity(suitableLocation.id, newCapacity);
+    await updateCapacity(suitableLocation.id, newCapacity);
 
     const apiKey = "5b3ce3597851110001cf6248a054cf25d5b943f8a23d1e01143ef5ed";
     final start = "${currentLocation!.longitude},${currentLocation!.latitude}";
@@ -320,7 +325,7 @@ class LocationController {
       final url =
           "https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$start&end=$end";
       print("Fetching route with capacity from: $url");
-      final response = await http.get(Uri.parse(url));
+      final response = await _httpGetWithRetry(Uri.parse(url));
 
       print("Route response status: ${response.statusCode}");
       print("Route response body: ${response.body}");
@@ -333,7 +338,6 @@ class LocationController {
               .map<LatLng>((point) => LatLng(point[1], point[0]))
               .toList();
           print("Route points fetched: ${routePoints.length}");
-
           _monitorArrival();
         } else {
           throw Exception("No route found in response.");
@@ -343,7 +347,7 @@ class LocationController {
             "Failed to fetch route: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      await _updateCapacity(
+      await updateCapacity(
           suitableLocation.id, suitableLocation.actualCapacity);
       print("Error fetching route with capacity: $e");
       throw Exception("Error fetching route: $e");
@@ -352,11 +356,17 @@ class LocationController {
     }
   }
 
-  Future<void> _updateCapacity(String locationId, int newCapacity) async {
+  Future<void> updateCapacity(String locationId, int newCapacity) async {
+    // Cancel any existing debounce timer
+    _debounceTimer?.cancel();
+
+    // Debounce the update to prevent rapid consecutive calls
+    await Future.delayed(const Duration(milliseconds: 500));
+
     final location = locations.firstWhere((loc) => loc.id == locationId);
     final oldCapacity = location.capacity;
     try {
-      final response = await http.put(
+      final response = await _httpPutWithRetry(
         Uri.parse(
             "https://admin-evacu-ease.vercel.app/api/locations/$locationId"),
         headers: {"Content-Type": "application/json"},
@@ -380,7 +390,7 @@ class LocationController {
 
   Future<void> resetCapacity(String locationId) async {
     final location = locations.firstWhere((loc) => loc.id == locationId);
-    await _updateCapacity(locationId, location.actualCapacity);
+    await updateCapacity(locationId, location.actualCapacity);
     print("Capacity reset for $locationId to ${location.actualCapacity}");
   }
 
@@ -392,9 +402,7 @@ class LocationController {
     positionSubscription?.cancel();
     positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
+          accuracy: LocationAccuracy.high, distanceFilter: 5),
     ).listen((Position position) {
       currentLocation = LatLng(position.latitude, position.longitude);
       final distance = Geolocator.distanceBetween(
@@ -419,13 +427,64 @@ class LocationController {
       print(
           "User arrived at ${location.name}, capacity remains ${location.capacity} until 'Done' is pressed");
       positionSubscription?.cancel();
-      onArrival?.call(); // Notify arrival
+      onArrival?.call();
     }
+  }
+
+  // HTTP GET with retry logic
+  Future<http.Response> _httpGetWithRetry(Uri uri) async {
+    const maxRetries = 3;
+    const retryDelay = Duration(seconds: 2);
+    int attempt = 1;
+
+    while (attempt <= maxRetries) {
+      try {
+        final response =
+            await http.get(uri).timeout(const Duration(seconds: 10));
+        return response;
+      } catch (e) {
+        print("HTTP GET attempt $attempt failed: $e");
+        if (attempt == maxRetries) {
+          throw Exception(
+              "Failed to fetch data after $maxRetries attempts: $e");
+        }
+        await Future.delayed(retryDelay);
+        attempt++;
+      }
+    }
+    throw Exception("Unexpected error in HTTP GET retry logic");
+  }
+
+  // HTTP PUT with retry logic
+  Future<http.Response> _httpPutWithRetry(Uri uri,
+      {Map<String, String>? headers, Object? body}) async {
+    const maxRetries = 3;
+    const retryDelay = Duration(seconds: 2);
+    int attempt = 1;
+
+    while (attempt <= maxRetries) {
+      try {
+        final response = await http
+            .put(uri, headers: headers, body: body)
+            .timeout(const Duration(seconds: 10));
+        return response;
+      } catch (e) {
+        print("HTTP PUT attempt $attempt failed: $e");
+        if (attempt == maxRetries) {
+          throw Exception(
+              "Failed to update data after $maxRetries attempts: $e");
+        }
+        await Future.delayed(retryDelay);
+        attempt++;
+      }
+    }
+    throw Exception("Unexpected error in HTTP PUT retry logic");
   }
 
   void dispose() {
     compassSubscription?.cancel();
     positionSubscription?.cancel();
+    _debounceTimer?.cancel();
     onArrival = null;
   }
 }

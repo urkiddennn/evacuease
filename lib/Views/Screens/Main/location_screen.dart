@@ -50,7 +50,6 @@ class _LocationScreenState extends State<LocationScreen>
         _handleEmergencyRoute();
       });
     }
-    // Listen for arrival updates from controller
     _controller.onArrival = () {
       if (mounted) {
         setState(() {
@@ -62,15 +61,13 @@ class _LocationScreenState extends State<LocationScreen>
 
   void _initializeLocationAndMap() async {
     setState(() => _controller.isLoading = true);
-
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text("Location services are disabled. Please enable them."),
-          ),
+              content:
+                  Text("Location services are disabled. Please enable them.")),
         );
         await Geolocator.openLocationSettings();
         return;
@@ -90,8 +87,7 @@ class _LocationScreenState extends State<LocationScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "Location permission permanently denied. Please enable it in settings.",
-            ),
+                "Location permission permanently denied. Please enable it in settings."),
           ),
         );
         await Geolocator.openAppSettings();
@@ -114,24 +110,16 @@ class _LocationScreenState extends State<LocationScreen>
         print("Moving map to: ${_controller.currentLocation}");
         _mapController.move(_controller.currentLocation!, 17.0);
 
-        await _controller._updateCurrentPlaceName();
-
+        await _controller.updateCurrentPlaceName();
         await _controller.fetchLocations((isLoading) {
-          if (mounted) {
-            setState(() {
-              _controller.isLoading = isLoading;
-            });
-          }
+          if (mounted) setState(() => _controller.isLoading = isLoading);
         });
-
         _controller.findNearestLocation();
         setState(() {});
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _controller.isLoading = false;
-        });
+        setState(() => _controller.isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Failed to get location: $e")),
         );
@@ -152,13 +140,9 @@ class _LocationScreenState extends State<LocationScreen>
 
   void _startLocationAutoRefresh() {
     _locationRefreshTimer =
-        Timer.periodic(const Duration(seconds: 10), (timer) async {
+        Timer.periodic(const Duration(seconds: 30), (timer) async {
       await _controller.fetchLocations((isLoading) {
-        if (mounted) {
-          setState(() {
-            _controller.isLoading = isLoading;
-          });
-        }
+        if (mounted) setState(() => _controller.isLoading = isLoading);
       });
       _controller.findNearestLocation();
       setState(() {});
@@ -182,11 +166,7 @@ class _LocationScreenState extends State<LocationScreen>
   Future<void> _startNavigation(int familySize) async {
     try {
       await _controller.fetchRouteWithCapacity(familySize, (isLoading) {
-        if (mounted) {
-          setState(() {
-            _controller.isLoading = isLoading;
-          });
-        }
+        if (mounted) setState(() => _controller.isLoading = isLoading);
       }, hazardType: _selectedHazardType);
 
       if (_controller.nearestLocations.isEmpty) {
@@ -289,10 +269,9 @@ class _LocationScreenState extends State<LocationScreen>
               const Text(
                 "Nearest Evacuation Sites",
                 style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -373,6 +352,10 @@ class _LocationScreenState extends State<LocationScreen>
                               child: ElevatedButton(
                                 onPressed: () async {
                                   Navigator.pop(context);
+                                  final previousLocationId =
+                                      _controller.currentLocationId;
+                                  final previousFamilySize =
+                                      _controller.currentFamilySize;
                                   _controller.nearestLocation = location;
                                   _controller.nearestLocationLatLng = LatLng(
                                       double.parse(
@@ -382,10 +365,30 @@ class _LocationScreenState extends State<LocationScreen>
                                   _controller.currentLocationId =
                                       location['id'];
                                   try {
+                                    // If already navigating, restore capacity of previous location
+                                    if (_isNavigating &&
+                                        previousLocationId != null &&
+                                        previousFamilySize != null) {
+                                      await _controller
+                                          .resetCapacity(previousLocationId);
+                                      print(
+                                          "Restored capacity for previous location: $previousLocationId");
+                                      // Update capacity for new location
+                                      final newLocModel = _controller.locations
+                                          .firstWhere((loc) =>
+                                              loc.id ==
+                                              _controller.currentLocationId);
+                                      final newCapacity = newLocModel.capacity -
+                                          previousFamilySize;
+                                      await _controller.updateCapacity(
+                                          _controller.currentLocationId!,
+                                          newCapacity);
+                                      print(
+                                          "Updated capacity for new location: ${_controller.currentLocationId}");
+                                    }
                                     await _controller.fetchRoute((isLoading) {
-                                      setState(() {
-                                        _controller.isLoading = isLoading;
-                                      });
+                                      setState(() =>
+                                          _controller.isLoading = isLoading);
                                     });
                                     if (_controller.routePoints.length < 2) {
                                       ScaffoldMessenger.of(context)
@@ -404,6 +407,27 @@ class _LocationScreenState extends State<LocationScreen>
                                       _updateMapRotation();
                                     }
                                   } catch (e) {
+                                    // If route fetch fails, revert to previous location if available
+                                    if (previousLocationId != null &&
+                                        previousFamilySize != null) {
+                                      _controller.currentLocationId =
+                                          previousLocationId;
+                                      _controller.currentFamilySize =
+                                          previousFamilySize;
+                                      _controller.nearestLocationLatLng = LatLng(
+                                          double.parse(_controller.nearestLocations
+                                              .firstWhere(
+                                                  (loc) =>
+                                                      loc['id'] ==
+                                                      previousLocationId)[
+                                                  'location']!
+                                              .split(',')[0]),
+                                          double.parse(_controller.nearestLocations
+                                              .firstWhere((loc) =>
+                                                  loc['id'] ==
+                                                  previousLocationId)['location']!
+                                              .split(',')[1]));
+                                    }
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                           content:
@@ -414,13 +438,10 @@ class _LocationScreenState extends State<LocationScreen>
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red[400],
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                                      borderRadius: BorderRadius.circular(8)),
                                 ),
-                                child: const Text(
-                                  "Select",
-                                  style: TextStyle(color: Colors.white),
-                                ),
+                                child: const Text("Select",
+                                    style: TextStyle(color: Colors.white)),
                               ),
                             ),
                           ],
@@ -437,8 +458,7 @@ class _LocationScreenState extends State<LocationScreen>
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.grey),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text("Close"),
                 ),
@@ -617,10 +637,9 @@ class _LocationScreenState extends State<LocationScreen>
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        points: _controller.routePoints,
-                        color: Colors.red,
-                        strokeWidth: 5,
-                      ),
+                          points: _controller.routePoints,
+                          color: Colors.red,
+                          strokeWidth: 5),
                     ],
                   ),
               ],
@@ -759,17 +778,21 @@ class _LocationScreenState extends State<LocationScreen>
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          final int? familySize = await _showFamilySizeDialog();
-          if (familySize != null) {
-            await _startNavigation(familySize);
+          if (_isNavigating) {
+            // If already navigating, allow changing evacuation site
+            _showNearestLocationsDialog();
           } else {
-            if (_controller.nearestLocationLatLng != null &&
+            final int? familySize = await _showFamilySizeDialog();
+            if (familySize != null) {
+              await _startNavigation(familySize);
+            } else if (_controller.nearestLocationLatLng != null &&
                 _controller.currentLocationId != null) {
               _controller.resetCapacity(_controller.currentLocationId!);
             }
           }
         },
-        label: const Text("Find Route", style: TextStyle(color: Colors.white)),
+        label: Text(_isNavigating ? "Change Evacuation Site" : "Find Route",
+            style: const TextStyle(color: Colors.white)),
         icon: const Icon(Icons.directions, color: Colors.white),
         backgroundColor: Colors.red[400],
       ),
@@ -850,10 +873,7 @@ class _LocationScreenState extends State<LocationScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, -2),
-          ),
+              color: Colors.black26, blurRadius: 10, offset: Offset(0, -2)),
         ],
       ),
       child: SingleChildScrollView(
@@ -868,10 +888,9 @@ class _LocationScreenState extends State<LocationScreen>
                   child: Text(
                     location.name,
                     style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -959,10 +978,9 @@ class _LocationScreenState extends State<LocationScreen>
             const Text(
               'Details',
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
             const SizedBox(height: 4),
             Text(
@@ -974,10 +992,9 @@ class _LocationScreenState extends State<LocationScreen>
               const Text(
                 'Contacts',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
               ),
               const SizedBox(height: 4),
               ...location.contacts.map((contact) => Padding(
@@ -1004,13 +1021,28 @@ class _LocationScreenState extends State<LocationScreen>
                 ElevatedButton.icon(
                   onPressed: () async {
                     Navigator.pop(context);
+                    final previousLocationId = _controller.currentLocationId;
+                    final previousFamilySize = _controller.currentFamilySize;
+                    _controller.nearestLocationLatLng =
+                        LatLng(location.lat, location.lng);
+                    _controller.currentLocationId = location.id;
                     try {
+                      if (_isNavigating &&
+                          previousLocationId != null &&
+                          previousFamilySize != null) {
+                        await _controller.resetCapacity(previousLocationId);
+                        print(
+                            "Restored capacity for previous location: $previousLocationId");
+                        final newCapacity =
+                            location.capacity - previousFamilySize;
+                        await _controller.updateCapacity(
+                            location.id, newCapacity);
+                        print(
+                            "Updated capacity for new location: ${location.id}");
+                      }
                       await _controller.fetchRoute((isLoading) {
-                        if (mounted) {
-                          setState(() {
-                            _controller.isLoading = isLoading;
-                          });
-                        }
+                        if (mounted)
+                          setState(() => _controller.isLoading = isLoading);
                       });
                       if (_controller.routePoints.length < 2) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -1026,8 +1058,24 @@ class _LocationScreenState extends State<LocationScreen>
                         _updateMapRotation();
                       }
                     } catch (e) {
+                      if (previousLocationId != null &&
+                          previousFamilySize != null) {
+                        _controller.currentLocationId = previousLocationId;
+                        _controller.currentFamilySize = previousFamilySize;
+                        _controller.nearestLocationLatLng = LatLng(
+                            double.parse(_controller.nearestLocations
+                                .firstWhere((loc) =>
+                                    loc['id'] ==
+                                    previousLocationId)['location']!
+                                .split(',')[0]),
+                            double.parse(_controller.nearestLocations
+                                .firstWhere((loc) =>
+                                    loc['id'] ==
+                                    previousLocationId)['location']!
+                                .split(',')[1]));
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(e.toString())),
+                        SnackBar(content: Text("Error fetching route: $e")),
                       );
                     }
                   },
@@ -1037,8 +1085,7 @@ class _LocationScreenState extends State<LocationScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 OutlinedButton.icon(
@@ -1048,8 +1095,7 @@ class _LocationScreenState extends State<LocationScreen>
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.grey),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
@@ -1059,10 +1105,6 @@ class _LocationScreenState extends State<LocationScreen>
       ),
     );
   }
-}
-
-extension on LocationController {
-  _updateCurrentPlaceName() {}
 }
 
 class FamilySizeDialog extends StatefulWidget {
@@ -1109,19 +1151,14 @@ class _FamilySizeDialogState extends State<FamilySizeDialog> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: "Custom number",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 filled: true,
                 fillColor: Colors.grey[100],
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              onChanged: (value) {
-                setState(() {
-                  selectedSize = null;
-                });
-              },
+              onChanged: (value) => setState(() => selectedSize = null),
             ),
           ],
         ),
@@ -1129,10 +1166,7 @@ class _FamilySizeDialogState extends State<FamilySizeDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
-          child: const Text(
-            "Cancel",
-            style: TextStyle(color: Colors.grey),
-          ),
+          child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
         ),
         ElevatedButton(
           onPressed: () {
@@ -1156,10 +1190,7 @@ class _FamilySizeDialogState extends State<FamilySizeDialog> {
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          child: const Text(
-            "Confirm",
-            style: TextStyle(color: Colors.white),
-          ),
+          child: const Text("Confirm", style: TextStyle(color: Colors.white)),
         ),
       ],
     );
@@ -1186,10 +1217,7 @@ class _FamilySizeDialogState extends State<FamilySizeDialog> {
           child: Text(
             "$value",
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ),
