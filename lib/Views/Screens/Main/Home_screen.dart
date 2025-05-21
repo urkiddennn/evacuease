@@ -39,13 +39,13 @@ class _HomeScreenState extends State<HomeScreen> {
     'I - Scarcely perceptible': 1,
     // Flood levels
     'Red - High': 4,
-    'Red orange - Medium': 3,
+    'Red_orange - Medium': 3,
     'Orange - Low': 2,
-    'Yellow - Very Low': 1,
+    'Yellow - Very_Low': 1,
     // Landslide levels
-    'Red - High Susceptibility': 3,
-    'Violet - Moderate Susceptibility': 2,
-    'Yellow - Low Susceptibility': 1,
+    'Red - High_Susceptibility': 3,
+    'Violet - Moderate_Susceptibility': 2,
+    'Yellow - low_Susceptibility': 1,
     // Storm Surge levels
     'High': 3,
     'Medium': 2,
@@ -637,29 +637,46 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRiskAreaItem(BuildContext context, RiskArea area) {
     final level = area.hazardLevels[_selectedHazardType] ?? 'Unknown';
     Color riskColor;
-    if (level.contains('High') ||
-        level.contains('Red') ||
-        level.contains('VI') ||
-        level.contains('VII') ||
-        level.contains('VIII') ||
-        level.contains('IX') ||
-        level.contains('X')) {
-      riskColor = Colors.red;
-    } else if (level.contains('Medium') ||
-        level.contains('Moderate') ||
-        level.contains('Orange') ||
-        level.contains('Violet') ||
-        level.contains('V')) {
-      riskColor = Colors.orange;
-    } else if (level.contains('Low') ||
-        level.contains('Yellow') ||
-        level.contains('I') ||
-        level.contains('II') ||
-        level.contains('III') ||
-        level.contains('IV')) {
-      riskColor = Colors.green;
+
+    // Handle Landslide susceptibility levels explicitly
+    if (_selectedHazardType == 'Landslide') {
+      if (level == 'Red - High_Susceptibility') {
+        riskColor = Colors.red;
+      } else if (level == 'Violet - Moderate_Susceptibility') {
+        riskColor = Colors.purple; // Violet is approximated as purple
+      } else if (level == 'Yellow - Low_Susceptibility') {
+        riskColor = Colors.yellow;
+      } else {
+        riskColor = Colors.grey; // Fallback for unexpected levels
+      }
     } else {
-      riskColor = Colors.grey;
+      // Existing logic for other hazard types (Earthquake, Flood, Storm Surge)
+      if (level.contains('High') ||
+          level.contains('Red') ||
+          level.contains('VI') ||
+          level.contains('VII') ||
+          level.contains('VIII') ||
+          level.contains('IX') ||
+          level.contains('X')) {
+        riskColor = Colors.red;
+      } else if (level.contains('Medium') ||
+          level.contains('Moderate') ||
+          level.contains('Orange') ||
+          level.contains('V')) {
+        riskColor = Colors.orange;
+      } else if (level.contains('Red_orange')) {
+        riskColor = Colors.redAccent;
+      } else if (level.contains('Low') ||
+          level.contains('I') ||
+          level.contains('II') ||
+          level.contains('III') ||
+          level.contains('IV')) {
+        riskColor = Colors.green;
+      } else if (level.contains('Very_')) {
+        riskColor = Colors.yellow;
+      } else {
+        riskColor = Colors.grey; // Fallback for unexpected levels
+      }
     }
 
     return Container(

@@ -121,29 +121,54 @@ class _RiskAreaScreenState extends State<RiskAreaScreen> {
 
     // Determine risk color based on hazard level (same logic as new version)
     Color riskColor;
-    if (level.contains('Low') ||
-        level.contains('I') ||
-        level.contains('II') ||
-        level.contains('Yellow')) {
-      riskColor = Colors.green;
-    } else if (level.contains('Medium') ||
-        level.contains('Moderate') ||
-        level.contains('III') ||
-        level.contains('IV') ||
-        level.contains('Orange') ||
-        level.contains('Violet')) {
-      riskColor = Colors.orange;
-    } else if (level.contains('High') ||
-        level.contains('V') ||
-        level.contains('VI') ||
-        level.contains('VII') ||
-        level.contains('VIII') ||
-        level.contains('IX') ||
-        level.contains('X') ||
-        level.contains('Red')) {
-      riskColor = Colors.red;
+    if (_selectedHazardType == 'Landslide') {
+      if (level == 'Red - High_Susceptibility') {
+        riskColor = Colors.red;
+      } else if (level.contains('Moderate_Susceptibility')) {
+        riskColor = Colors.purple; // Violet is approximated as purple
+      } else if (level == 'Yellow') {
+        riskColor = Colors.yellow;
+      } else {
+        riskColor = Colors.purple; // Fallback for unexpected levels
+      }
+    }
+    if (_selectedHazardType == "Flood") {
+      if (level == 'Red - High') {
+        riskColor = Colors.red;
+      } else if (level.contains('Red_Orange - Medium')) {
+        riskColor = Colors.deepOrangeAccent; // Violet is approximated as purple
+      } else if (level == 'Orange - Low') {
+        riskColor = Colors.orange;
+      } else {
+        riskColor = Colors.yellow; // Fallback for unexpected levels
+      }
     } else {
-      riskColor = Colors.grey;
+      // Existing logic for other hazard types (Earthquake, Flood, Storm Surge)
+      if (level.contains('High') ||
+          level.contains('Red') ||
+          level.contains('VI') ||
+          level.contains('VII') ||
+          level.contains('VIII') ||
+          level.contains('IX') ||
+          level.contains('X')) {
+        riskColor = Colors.red;
+      } else if (level.contains('Moderate') ||
+          level.contains('Orange') ||
+          level.contains('V')) {
+        riskColor = Colors.orange;
+      } else if (level.contains('Low') ||
+          level.contains('I') ||
+          level.contains('II') ||
+          level.contains('III') ||
+          level.contains('IV')) {
+        riskColor = Colors.green;
+      } else if (level.contains("Very_")) {
+        riskColor = Colors.yellow;
+      } else if (level.contains('Yellow')) {
+        riskColor = Colors.yellow;
+      } else {
+        riskColor = Colors.grey; // Fallback for unexpected levels
+      }
     }
 
     return HeroControllerScope.none(

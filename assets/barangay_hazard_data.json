@@ -11,8 +11,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Red - High Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Red - High_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -28,8 +28,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "red - High",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Red - High",
             "Storm Surge": "Low"
         }
     },
@@ -45,8 +45,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Red Orange - Medium",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Red_Orange - Medium",
             "Storm Surge": "Low"
         }
     },
@@ -62,8 +62,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Red - High Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Red - High_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -79,8 +79,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Red - High Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Red - High_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -96,8 +96,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Red Orange - Medium",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Red_Orange - Medium",
             "Storm Surge": "Low"
         }
     },
@@ -113,8 +113,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -130,8 +130,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Violet - Medium Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Violet - Medium_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -147,7 +147,7 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
+            "Landslide": "Yellow - low_Susceptibility",
             "Flood": "Orange - Low",
             "Storm Surge": "Low"
         }
@@ -164,8 +164,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -181,8 +181,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Violet - Medium Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Violet - Medium_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -198,8 +198,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Violet - Medium Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Violet - Medium_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -215,7 +215,7 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Violet - Medium Susceptibility",
+            "Landslide": "Violet - Medium_Susceptibility",
             "Flood": "Yellow - Low",
             "Storm Surge": "Medium"
         }
@@ -232,7 +232,7 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Violet - Medium Susceptibility",
+            "Landslide": "Violet - Medium_Susceptibility",
             "Flood": "Yellow - Medium",
             "Storm Surge": "Low"
         }
@@ -249,7 +249,7 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
+            "Landslide": "Yellow - low_Susceptibility",
             "Flood": "Red - High",
             "Storm Surge": "Low"
         }
@@ -266,8 +266,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Red - High Susceptibility",
-            "Flood": "Red Orange - Medium",
+            "Landslide": "Red - High_Susceptibility",
+            "Flood": "Red_Orange - Medium",
             "Storm Surge": "Low"
         }
     },
@@ -283,8 +283,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Red - High Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Red - High_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Low"
         }
     },
@@ -300,8 +300,8 @@
         },
         "hazardLevels": {
             "Earthquake": "I - Scarcely perceptible",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "High"
         }
     },
@@ -317,8 +317,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "High"
         }
     },
@@ -334,8 +334,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "High"
         }
     },
@@ -351,8 +351,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "High"
         }
     },
@@ -368,7 +368,7 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
+            "Landslide": "Yellow - low_Susceptibility",
             "Flood": "Orange - Low",
             "Storm Surge": "Medium"
         }
@@ -385,8 +385,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Medium"
         }
     },
@@ -402,8 +402,8 @@
         },
         "hazardLevels": {
             "Earthquake": "VI - Very strong",
-            "Landslide": "Yellow - Low Susceptibility",
-            "Flood": "Yellow - Very Low",
+            "Landslide": "Yellow - low_Susceptibility",
+            "Flood": "Yellow - Very_Low",
             "Storm Surge": "Medium"
         }
     }

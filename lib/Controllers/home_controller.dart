@@ -145,7 +145,10 @@ class HomeController {
         predictedRiskAreas.add(RiskArea(
           name: barangay["name"],
           riskLevel: riskLevel,
-          riskColor: _getRiskColor(hazardScore: overallHazardScore),
+          riskColor: _getRiskColor(
+              hazardScore: overallHazardScore,
+              hazardType: "Landslide",
+              hazardLevel: hazardLevels["Landslide"]),
           hazardScores: hazardScores,
           hazardLevels: hazardLevels,
         ));
@@ -189,7 +192,30 @@ class HomeController {
     return "Low";
   }
 
-  Color _getRiskColor({required double hazardScore}) {
+  Color _getRiskColor(
+      {required double hazardScore, String? hazardType, String? hazardLevel}) {
+    if (hazardType == 'Landslide' && hazardLevel != null) {
+      if (hazardLevel == 'Red - High_Susceptibility') {
+        return Colors.red;
+      } else if (hazardLevel == 'Violet - Moderate_Susceptibility') {
+        return Colors.purple; // Violet approximated as purple
+      } else if (hazardLevel == 'Yellow - Low_Susceptibility') {
+        return Colors.yellow;
+      }
+    }
+    if (hazardType == 'Flood' && hazardLevel != null) {
+      if (hazardLevel == 'red - High') {
+        return Colors.red;
+      } else if (hazardLevel == 'Red_Orange - Medium') {
+        return Colors.redAccent; // Violet approximated as purple
+      } else if (hazardLevel == 'Orange - Low') {
+        return Colors.orange;
+      } else if (hazardLevel == 'Yellow - Very_Low') {
+        return Colors.yellow;
+      }
+    }
+
+    // Fallback to original score-based logic for other hazard types
     if (hazardScore >= 3.5) return Colors.red;
     if (hazardScore >= 2.5) return Colors.orange;
     return Colors.green;
