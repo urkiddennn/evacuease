@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Yellow - Very_Low': 1,
     // Landslide levels
     'Red - High_Susceptibility': 3,
-    'Violet - Moderate_Susceptibility': 2,
+    'Violet - Medium_Susceptibility': 2,
     'Yellow - low_Susceptibility': 1,
     // Storm Surge levels
     'High': 3,

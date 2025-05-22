@@ -124,7 +124,7 @@ class _RiskAreaScreenState extends State<RiskAreaScreen> {
     if (_selectedHazardType == 'Landslide') {
       if (level == 'Red - High_Susceptibility') {
         riskColor = Colors.red;
-      } else if (level.contains('Moderate_Susceptibility')) {
+      } else if (level.contains('Medium_Susceptibility')) {
         riskColor = Colors.purple; // Violet is approximated as purple
       } else if (level == 'Yellow') {
         riskColor = Colors.yellow;
@@ -135,7 +135,7 @@ class _RiskAreaScreenState extends State<RiskAreaScreen> {
     if (_selectedHazardType == "Flood") {
       if (level == 'Red - High') {
         riskColor = Colors.red;
-      } else if (level.contains('Red_Orange - Medium')) {
+      } else if (level == 'Red_Orange - Medium') {
         riskColor = Colors.deepOrangeAccent; // Violet is approximated as purple
       } else if (level == 'Orange - Low') {
         riskColor = Colors.orange;
@@ -152,9 +152,7 @@ class _RiskAreaScreenState extends State<RiskAreaScreen> {
           level.contains('IX') ||
           level.contains('X')) {
         riskColor = Colors.red;
-      } else if (level.contains('Moderate') ||
-          level.contains('Orange') ||
-          level.contains('V')) {
+      } else if (level.contains('Orange')) {
         riskColor = Colors.orange;
       } else if (level.contains('Low') ||
           level.contains('I') ||
@@ -166,6 +164,9 @@ class _RiskAreaScreenState extends State<RiskAreaScreen> {
         riskColor = Colors.yellow;
       } else if (level.contains('Yellow')) {
         riskColor = Colors.yellow;
+      } else if (level.contains('Violet') ||
+          level.contains('Medium_Susceptibility')) {
+        riskColor = Colors.purple;
       } else {
         riskColor = Colors.grey; // Fallback for unexpected levels
       }

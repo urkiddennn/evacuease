@@ -197,10 +197,12 @@ class HomeController {
     if (hazardType == 'Landslide' && hazardLevel != null) {
       if (hazardLevel == 'Red - High_Susceptibility') {
         return Colors.red;
-      } else if (hazardLevel == 'Violet - Moderate_Susceptibility') {
+      } else if (hazardLevel == 'Violet - Medium_Susceptibility') {
         return Colors.purple; // Violet approximated as purple
       } else if (hazardLevel == 'Yellow - Low_Susceptibility') {
         return Colors.yellow;
+      } else {
+        return Colors.purple;
       }
     }
     if (hazardType == 'Flood' && hazardLevel != null) {
